@@ -1,4 +1,4 @@
-// 1.21.1	2026-10-03T21:52:07.9144696	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
+// 1.21.1	2026-10-03T22:05:32.2955947	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
 e99760dd20a671e466dcdb8019dba5d041672b02 assets/gtetscore/blockstates/master_tower.json
 1cbd74ee434d591e54b2844b76391a215a744816 assets/gtetscore/blockstates/overclock_hatch_1024x_saving_max.json
 25043136f3ddc60bd363deeffe3bbf7c7a7bc420 assets/gtetscore/blockstates/overclock_hatch_16x_lossy2.json
@@ -178,7 +178,7 @@ bd5d4ad353bf6d5cd3073b47e10093f0e353cf66 assets/gtetscore/models/block/machine/t
 6875bc337ce893783400936f6ae67d824c0880f8 assets/gtetscore/models/block/machine/thread_hatch_uiv.json
 fffc126ae785bbcf1d4699d37b022eef3fe690c0 assets/gtetscore/models/block/machine/thread_hatch_uv.json
 ac4ce8893f11c491328452ef100813e5b3ab183c assets/gtetscore/models/block/machine/thread_hatch_uxv.json
-2ceff81e62350182aeffb491b4610fd1b7a5a5f3 assets/gtetscore/models/block/machine/thread_hatch_zpm.json
+2916f8a87477b86a338660330a3ae710740799cd assets/gtetscore/models/block/machine/thread_hatch_zpm.json
 830a42a4269aef0c4efa816d100e91832f32de8b assets/gtetscore/models/block/machine/wireless_energy_hatch_1024a_iv.json
 ec0789292b93dccac8ce45580b2cd74685b4e2dc assets/gtetscore/models/block/machine/wireless_energy_hatch_1024a_luv.json
 81584a8c0759740402ad9f9f8b0b02e04f347abd assets/gtetscore/models/block/machine/wireless_energy_hatch_1024a_max.json

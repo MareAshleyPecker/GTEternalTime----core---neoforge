@@ -41,14 +41,16 @@ object ETThreadHatches {
      * ⚠️ 「线程数」与并行仓的「并行数」不是同一个量：线程是同时能跑的**配方实例数**上限，
      * 并行仓那个数是**每条线程**各吃的并行倍率，整机处理量 ≈ 线程数 × 并行倍数 —— 两族档位不用对齐。
      *
-     * @param id      注册名（同时是方块 id 与名字语言键 `block.gtetscore.<id>`）
-     * @param threads 该档的线程数上限
-     * @param tier    电压档位（决定外壳与正面覆盖层）
+     * @param id        注册名（同时是方块 id 与名字语言键 `block.gtetscore.<id>`）
+     * @param threads   该档的线程数上限
+     * @param tier      电压档位（决定外壳与正面覆盖层）
+     * @param overlayMk 正面覆盖层编号：取 GTOCore `thread_hatch_mk<N>` 素材的 N（1..7），**显式写死、不按 tier 算**
      */
     data class ThreadHatchVariant(
         val id: String,
         val threads: Int,
         val tier: Int,
+        val overlayMk: Int,
     ) {
         init {
             require(tier in GTValues.ZPM..GTValues.MAX) {
@@ -56,6 +58,9 @@ object ETThreadHatches {
             }
             require(threads >= ThreadHatchPartMachine.MIN_THREAD) {
                 "ThreadHatchVariant '$id': threads=$threads 必须 ≥ ${ThreadHatchPartMachine.MIN_THREAD}"
+            }
+            require(overlayMk in MK_MIN..MK_MAX) {
+                "ThreadHatchVariant '$id': overlayMk=$overlayMk 超出 $MK_MIN..$MK_MAX（GTOCore 只有 mk1~mk7）"
             }
         }
     }
@@ -71,15 +76,21 @@ object ETThreadHatches {
     /** GTOCore 线程仓覆盖层目录前缀：完整路径 = 本前缀 + mk 编号（`..._mk1` … `..._mk7`）。 */
     private const val THREAD_OVERLAY_ROOT = "block/machines/thread_hatch/thread_hatch_mk"
 
+    /** GTOCore 素材实际存在的编号区间。 */
+    private const val MK_MIN = 1
+    private const val MK_MAX = 7
+
     /**
      * 变体对应的 GTOCore 覆盖层目录（`createWorkableTieredHullMachineModel` 的 `overlayDir` 参数）。
      *
-     * ⚠️ GTOCore 的素材只有 `mk1` ~ `mk7`，而本族的编号是 `mk = tier - ZPM` ⇒ **ZPM 那一档算出 `mk0`，
-     * 资源里没有 ⇒ 该档没有正面覆盖层，是纯外壳**（UV 起才有图：uv→mk1 … max→mk7）。
-     * 老工程同样如此，这里原样保留、不夹取（夹到 mk1 会让 ZPM 与 UV 长得一模一样）。
+     * ⚠️ **编号是查表来的，不按 tier 算**。GTOCore 自己的规则是 `mk = tier - ZPM`、区间 UV..MAX
+     * ⇒ 素材只有 `mk1`~`mk7`，正好对上 UV..MAX 这 7 档；而本族比它多一个更低的 ZPM 档
+     * （老工程按 `tier - ZPM` 算，ZPM 那档会算出不存在的 `mk0`，正面一片空白）。
+     * 8 档只能分 7 张图，**必然有一档复用**：这里让 ZPM 复用 `mk1`，其余 7 档与 GTOCore 逐档对齐
+     * （uv→mk1 … max→mk7）。想给 ZPM 一张独有的图，就得自己画一张 mk0（或把 ZPM 从本族去掉）。
      */
     private fun overlayFor(v: ThreadHatchVariant): ResourceLocation =
-        ResourceLocation.fromNamespaceAndPath(GTOCORE_NS, THREAD_OVERLAY_ROOT + (v.tier - GTValues.ZPM))
+        ResourceLocation.fromNamespaceAndPath(GTOCORE_NS, THREAD_OVERLAY_ROOT + v.overlayMk)
 
     /**
      * 全部线程仓变体（8 档）：ZPM 起每级翻倍，一路到 MAX。
@@ -87,14 +98,14 @@ object ETThreadHatches {
      * ⚠️ 顺序即注册顺序（影响物品栏与存档里的出现次序），加档请往末尾追加、不要重排既有行、也不要改既有 id。
      */
     val VARIANTS: List<ThreadHatchVariant> = listOf(
-        ThreadHatchVariant("thread_hatch_zpm", 4, GTValues.ZPM),
-        ThreadHatchVariant("thread_hatch_uv", 8, GTValues.UV),
-        ThreadHatchVariant("thread_hatch_uhv", 16, GTValues.UHV),
-        ThreadHatchVariant("thread_hatch_uev", 32, GTValues.UEV),
-        ThreadHatchVariant("thread_hatch_uiv", 64, GTValues.UIV),
-        ThreadHatchVariant("thread_hatch_uxv", 128, GTValues.UXV),
-        ThreadHatchVariant("thread_hatch_opv", 256, GTValues.OpV),
-        ThreadHatchVariant("thread_hatch_max", 512, GTValues.MAX),
+        ThreadHatchVariant("thread_hatch_zpm", 4, GTValues.ZPM, 1),
+        ThreadHatchVariant("thread_hatch_uv", 8, GTValues.UV, 1),
+        ThreadHatchVariant("thread_hatch_uhv", 16, GTValues.UHV, 2),
+        ThreadHatchVariant("thread_hatch_uev", 32, GTValues.UEV, 3),
+        ThreadHatchVariant("thread_hatch_uiv", 64, GTValues.UIV, 4),
+        ThreadHatchVariant("thread_hatch_uxv", 128, GTValues.UXV, 5),
+        ThreadHatchVariant("thread_hatch_opv", 256, GTValues.OpV, 6),
+        ThreadHatchVariant("thread_hatch_max", 512, GTValues.MAX, 7),
     )
 
     /** 把整张变体表注册成方块；返回顺序与表一致。 */

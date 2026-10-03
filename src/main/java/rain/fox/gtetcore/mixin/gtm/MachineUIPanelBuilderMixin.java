@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -35,6 +36,8 @@ import rain.fox.gtetcore.client.mui.MachineIoConfig;
 public class MachineUIPanelBuilderMixin {
 
     /** 与 `GTETSCore.LOGGER` 同名；那个字段在 Kotlin 侧是 private，Java 摸不到。 */
+    @SuppressWarnings("AddedMixinMembersNamePattern")
+    @Unique
     private static final Logger LOGGER = LogManager.getLogger(GTETSCore.ID);
 
     @Shadow
