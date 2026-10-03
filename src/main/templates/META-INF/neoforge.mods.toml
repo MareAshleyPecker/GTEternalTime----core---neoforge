@@ -109,3 +109,13 @@ type = "optional"
 versionRange = "[${jade_version},)"
 ordering = "AFTER"
 side = "BOTH"
+
+# AE2（可选）：ME 样板总成 / 标签库存仓 / 库存输入仓那一族都建立它之上。
+# 没装不崩 —— 那几个类只在 AE2 在场时才会被加载（部件注册表本身在 AE2 缺席时不注册对应变体）。
+# GuideME 不在这里声明：它是 AE2 的必需前置，装了 AE2 就一定有，我们只是不直接引用它。
+[[dependencies."${mod_id}"]]
+modId = "ae2"
+type = "optional"
+versionRange = "[${ae2_version},)"
+ordering = "AFTER"
+side = "BOTH"

@@ -21,8 +21,17 @@ dependencies {
     // LDLib2：GTCEu 8.0.0 已弃用它（不再捎带），要用就得自己声明；`:all` 才是带全依赖的 jar。
     implementation "com.lowdragmc.ldlib2:ldlib2-neoforge-${minecraft_version}:${ldlib2_version}:all"
 
-    // ── 阶段 3（可选）：AE2 / Jade 集成 ──
-    // compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    // ── 阶段 3（可选）：AE2 集成 ──
+    // 坐标用 Modrinth Maven（仓库已在 repositories.gradle 里，jade 同款）：`maven.modrinth:ae2:<version_number>`。
+    // appeng:* 那套坐标（appliedenergistics2-neoforge / -forge）在本机两个仓库都解析不到，别用。
+    // jar 里带 314 个 appeng.api.* 类，可直接当编译依赖用。
+    compileOnly "maven.modrinth:ae2:${ae2_version}"
+    runtimeOnly "maven.modrinth:ae2:${ae2_version}"
+
+    // GuideME 是 AE2 的**必需**前置（AE2 自己的 mods.toml 写 `guideme [21.1.1,)`），
+    // 不放进运行期 AE2 根本加载不起来；我们代码不直接引用它，给 compileOnly 只是为了万一。
+    compileOnly "maven.modrinth:guideme:${guideme_version}"
+    runtimeOnly "maven.modrinth:guideme:${guideme_version}"
 
     // ── Jade（可选依赖，坐标与版本对齐 GTM 的 gradle/forge.versions.toml:97）──
     // runtimeOnly 是给 dev 客户端用的：不放进运行期就进不了游戏验证。
