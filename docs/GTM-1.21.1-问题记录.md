@@ -277,6 +277,21 @@ net.neoforged.fml.ModLoadingException: Loading errors encountered:
 
 ---
 
+## 12. 3D 预览里「给某个面画标记」看不见（严重度：中 · 状态：已修；MUI 的 `BlockHighlight` 重载陷阱）
+
+**一句话**：`BlockHighlight(int color, float thickness)` 这个二参重载内部把 `allSides` **写死 true**，于是"标记某一个面"变成"六个面各画一圈细边"——在满贴图的机器模型上几乎不可见。
+
+**来源**：无报错（纯视觉问题，日志里看不出任何异常）。
+
+**触发**：在 MUI 的 3D schema 预览里给某个面画高亮（我们的 3D 输入输出配置页就是这么干的）。
+
+**成因**：`BlockHighlight` 四个构造器里只有 `(int, boolean, float)` 真正给 `allSides` 赋值，`(int, float)` 是 `this(color, true, thickness)`；而 `doRender` 开头 `if (allSides) direction = null;`，`renderFrame` 拿到 `null` 就遍历 `Direction.values()` 六个面全画。
+
+**处理**：改用三参构造器 `BlockHighlight(color, false, thickness)`（只框指定面），厚度 1/32 → 1/8 格、alpha 拉满。
+**附带**：本 MUI 快照（3.3.1）里 `renderSolid` 是**死路径** —— 建完顶点既没有 `Tesselator.end()` 也没有 `BufferUploader`，所以 `thickness < 0` 的"整面涂色"画不出东西，别指望这条路。
+
+---
+
 ## 模板（新增条目时复制）
 
 ```markdown
