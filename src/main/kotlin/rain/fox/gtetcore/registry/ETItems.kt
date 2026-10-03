@@ -17,6 +17,7 @@ import rain.fox.gtetcore.util.lang.LangUtil
 object ETItems {
 
     /** 「一次搭建的方块数超限」提示键；值必须与 `AdvancedTerminalBuilder` 里引用的字面量一致。 */
+    @Suppress("ConstPropertyName")
     private const val build_too_many: String = "item.gtetcore.advanced_terminal.build.too_many"
 
     init {
@@ -37,7 +38,7 @@ object ETItems {
         )
     }
 
-    /** 高级终端 — 潜行右键多方块控制器自动搭建；右键空气开设置面板（本阶段留桩）。 */
+    /** 高级终端 — 潜行右键多方块控制器自动搭建；右键空气开设置面板（MUI，见 `AdvancedTerminalPanel`）。 */
     @JvmField
     val ADVANCED_TERMINAL: ItemEntry<ComponentItem> = run {
         LangUtil.ITEM_LANG["advanced_terminal"] = "§b高级终端"

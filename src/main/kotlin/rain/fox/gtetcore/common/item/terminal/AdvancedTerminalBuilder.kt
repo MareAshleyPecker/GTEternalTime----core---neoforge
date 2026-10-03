@@ -38,6 +38,7 @@ import java.lang.reflect.Modifier
  * ⚠️ AE 链接本阶段不移植（见各处 `TODO(AE 切片)`）：AE 一律视为「永远拿不到物品」，
  * 也就是老代码 `grid == null` 的那条分支，取料只走玩家背包。
  */
+@Suppress("ConstPropertyName")
 object AdvancedTerminalBuilder {
 
     /**

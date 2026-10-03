@@ -2,6 +2,7 @@ package rain.fox.gtetcore
 
 import rain.fox.gtetcore.config.GtetConfig
 import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
+import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
 import rain.fox.gtetcore.registry.ETDataComponents
 import rain.fox.gtetcore.registry.ETItems
@@ -30,6 +31,7 @@ import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
  *
  * 方块和机器都走 GTCEu 的 Registrate（见 `registry/ETRegistrate.kt`），不要再用 KFF 模板的 DeferredRegister。
  */
+@Suppress("unused")
 @Mod(Gtetcore.ID)
 object Gtetcore {
     const val ID = "gtetcore"
@@ -56,6 +58,9 @@ object Gtetcore {
         // 高级终端物品同理：registrate 只在 builder 被创建时登记，必须在这里取一次值
         @Suppress("UNUSED_EXPRESSION")
         ETItems.ADVANCED_TERMINAL
+
+        // 高级终端设置面板的语言键：必须早于 runData 的数据生成（zh_cn 生成器只负责写盘）
+        AdvancedTerminalLang.register()
         LOGGER.log(
             Level.INFO,
             "[GTET-TEST] 阶段 3 测试机器已登记：{}:test_sync_part，registrate 命名空间 = {}",

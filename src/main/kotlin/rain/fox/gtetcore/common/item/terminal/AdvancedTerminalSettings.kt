@@ -85,6 +85,7 @@ data class AdvancedTerminalSettings(
         }
 
         /** 改单项设置，返回新的设置对象。 */
+        @Suppress("unused")
         @JvmStatic
         fun modify(stack: ItemStack, change: (AdvancedTerminalSettings) -> AdvancedTerminalSettings) {
             write(stack, change(read(stack)))

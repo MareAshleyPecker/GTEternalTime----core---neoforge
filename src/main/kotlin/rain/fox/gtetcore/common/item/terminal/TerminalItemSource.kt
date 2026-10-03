@@ -15,6 +15,7 @@ import net.neoforged.neoforge.items.IItemHandler
  *
  * 扣物品的时机仍然是「放置成功之后」：预留 → 放置 → 成功则 commit、失败则 release。
  */
+@Suppress("unused")
 object TerminalItemSource {
 
     /** 嵌套容器只往下找一层（背包里那件物品自带的容器）。 */

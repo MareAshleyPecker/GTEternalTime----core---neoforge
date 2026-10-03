@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package rain.fox.gtetcore.common.item.terminal
 
 import com.gregtechceu.gtceu.api.GTCEuAPI

@@ -13,6 +13,7 @@ import rain.fox.gtetcore.Gtetcore
  * `timeflow`（时序潮汐与系数）、`overlay`（结构工具颜色）三段，等对应功能移植过来再补，
  * 免得先摆一堆用不到的空条目。键名与默认值必须与老项目保持一致。
  */
+@Suppress("ConstPropertyName")
 object GtetConfig {
 
     // ── 默认值（与老项目一字不差，改默认值等于改玩家行为）──

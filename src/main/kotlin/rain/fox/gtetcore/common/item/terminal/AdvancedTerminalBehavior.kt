@@ -1,31 +1,39 @@
 package rain.fox.gtetcore.common.item.terminal
 
-import com.gregtechceu.gtceu.api.item.component.IInteractionItem
+import brachy.modularui.factory.PlayerInventoryGuiData
+import brachy.modularui.screen.ModularPanel
+import brachy.modularui.screen.UISettings
+import brachy.modularui.value.sync.PanelSyncManager
 import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.machine.multiblock.MultiblockControllerMachine
+import com.gregtechceu.gtceu.api.mui.IItemUIHolder
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
-import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
-import net.minecraft.world.InteractionResultHolder
-import net.minecraft.world.entity.player.Player
-import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.UseOnContext
 import net.minecraft.world.level.Level
+import rain.fox.gtetcore.client.terminal.AdvancedTerminalPanel
 
 /**
  * 高级终端的行为组件。
  *
- * 本阶段只有一条真正可用的交互：**潜行右键多方块控制器 → 自动搭建**。
- * 搭建只在服务端做，客户端只负责把交互吃掉（避免两端各搭一次）。
+ * 交互分派：
+ * - 右键空气 / 未潜行右键方块 → MUI 的 [IItemUIHolder] 默认 `use`：打开设置面板
+ *   （服务端调 `PlayerInventoryUIFactory.openFromHand`，客户端只负责把交互吃掉）；
+ * - **潜行右键方块** → 本类的 [useOn]：目标是多方块控制器就自动搭建一次，否则给一句反馈；
+ *   两支都**总是**返回「已消耗交互」。
  *
- * 老代码里的另外两条交互留给后续切片：右键空气开设置面板（本类留桩）、
- * 潜行右键无线接入点绑 AE（整个不做，AE 切片再补）。
+ * 搭建只在服务端做，客户端只负责吃掉交互（避免两端各搭一次）。
  *
- * 注意老版实现接口 `IItemUIFactory` 在 GTM 8.0.0 已被删除，物品 UI 改走 MUI 的
- * `IItemUIHolder`；本阶段不接它，所以只实现仍存在的 [IInteractionItem]。
+ * ⚠️ GTM 8.0.0 删掉了老的 `IItemUIFactory`（LDLib 那套），物品界面改走 MUI 的 [IItemUIHolder]：
+ * 它是 `IUIHolder<PlayerInventoryGuiData<?>>` + `IInteractionItem` 的组合，而 `ComponentItem.buildUI`
+ * 会把界面委托给挂在自己身上的、第一个实现了该接口的组件（`shouldOpenUI()` 同理）。
+ * 所以本类就是那个组件；面板本体在 [AdvancedTerminalPanel]。
+ *
+ * @author rain fox
  */
-object AdvancedTerminalBehavior : IInteractionItem {
+@Suppress("ConstPropertyName")
+object AdvancedTerminalBehavior : IItemUIHolder {
 
     /** 「潜行右键的不是多方块控制器」提示键（老代码这一支是 AE 绑定手势，不提示）。 */
     const val msg_not_controller: String = "item.gtetcore.advanced_terminal.build.not_controller"
@@ -53,10 +61,13 @@ object AdvancedTerminalBehavior : IInteractionItem {
         return InteractionResult.sidedSuccess(level.isClientSide)
     }
 
-    override fun use(stack: ItemStack, level: Level, player: Player,
-                     hand: InteractionHand): InteractionResultHolder<ItemStack> {
-        // TODO(UI 切片)：接 MUI 的 IItemUIHolder 打开设置面板
-        // 本阶段留桩：直接放行，不影响其它交互
-        return InteractionResultHolder.pass(stack)
-    }
+    /**
+     * 建设置面板。
+     *
+     * MUI 会在服务端与客户端**各调一次**（服务端那次是为了登记同步值），所以这里只能依赖
+     * 「两端相同」的数据，可变状态一律交给 `syncManager` —— 细节见 [AdvancedTerminalPanel]。
+     */
+    override fun buildUI(data: PlayerInventoryGuiData<*>, syncManager: PanelSyncManager,
+                         settings: UISettings): ModularPanel<*> =
+        AdvancedTerminalPanel.build(data, syncManager, settings)
 }

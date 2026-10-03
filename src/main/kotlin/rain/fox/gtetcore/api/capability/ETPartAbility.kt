@@ -12,6 +12,7 @@ import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility
  * ⚠️ 名字都带 `gtet_` 前缀避免与 GTM / 其它 addon 撞名；三者**必须互相独立**：
  * 超频、线程、时序是正交的三件事，复用同一个能力会让它们在结构里互斥。
  */
+@Suppress("unused")
 object ETPartAbility {
 
     /** 超频仓专用能力。 */
