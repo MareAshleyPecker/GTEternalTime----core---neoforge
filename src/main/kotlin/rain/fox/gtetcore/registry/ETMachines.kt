@@ -16,6 +16,7 @@ import rain.fox.gtetcore.common.data.machine.hatch.ETTimeFlowHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETWirelessEnergyHatches
 import rain.fox.gtetcore.common.data.machine.multiblock.ETMasterTower
 import rain.fox.gtetcore.common.data.machine.multiblock.ETTestMultiblocks
+import rain.fox.gtetcore.common.data.machine.multiblock.modular.ETModularTestMultiblocks
 import rain.fox.gtetcore.common.machine.multiblock.part.ETParallelHatchPartMachine
 import rain.fox.gtetcore.util.ETPartSharing
 import rain.fox.gtetcore.util.lang.LangUtil
@@ -141,4 +142,14 @@ object ETMachines {
     @JvmField
     val TEST_MULTIBLOCK: MachineEntry<MultiblockMachineDefinition> =
         ETTestMultiblocks.register(ETRegistrate.REGISTRATE)
+
+    /**
+     * **模块化试验台**：模块物品（金 / 钛 / 中子素锭…）决定结构 3³ / 5³ / 7³ 与配方电压上限。
+     *
+     * 本机的图案只用 GTM 自带的 `autoAbilities`、不消费任何 `ETPartAbility`，所以**没有**
+     * `PartAbility#getAllBlocks()` 懒记忆化的顺序要求，放最后一行即可。
+     */
+    @JvmField
+    val MODULAR_TEST_MACHINE: MachineEntry<MultiblockMachineDefinition> =
+        ETModularTestMultiblocks.register(ETRegistrate.REGISTRATE)
 }

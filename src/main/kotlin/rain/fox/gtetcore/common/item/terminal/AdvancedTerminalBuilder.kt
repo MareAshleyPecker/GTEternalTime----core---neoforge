@@ -26,6 +26,7 @@ import net.minecraft.world.phys.BlockHitResult
 import net.neoforged.neoforge.capabilities.Capabilities
 import net.neoforged.neoforge.items.IItemHandler
 import org.apache.commons.lang3.ArrayUtils
+import rain.fox.gtetcore.common.machine.multiblock.modular.ETModularMachine
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
 import java.lang.reflect.Modifier
 
@@ -156,19 +157,23 @@ object AdvancedTerminalBuilder {
     /**
      * 选这次的图案。
      *
-     * `module == 0` 用控制器当前的主结构；`module == N > 0` 老版本取模块化多方块的第 N 档结构。
+     * `module == 0` 用控制器当前的主结构；`module == N > 0` 取模块化多方块的第 N 档结构。
      *
-     * TODO(模块化切片)：模块机（`ETModularMachine`）还没移植 —— 新版 GTM 的图案挂在
-     *  `MultiblockMachineDefinition` 上、按 substructure 的名字索引，老版那种覆写 `getPattern()` 的写法没有了。
-     *  所以模块档位暂时一律退回主结构，也就是老代码「取不到（不是模块机 / 档位非法 / 实现内部抛异常）
-     *  就静默退回主结构」的那条分支。
+     * ⚠️ 8.0.0 的图案挂在 `MultiblockMachineDefinition` 上、按 substructure 名字索引，老版那种覆写
+     * `getPattern()` 的写法没有了。模块机（`ETModularMachine`）在 8.0.0 上把每档图案注册成具名
+     * substructure、并按当前模块档位改写 `main` 的取法，所以这里直接问它要第 N 档那份
+     * （`patternForTier`）—— 与它自己成型时用的是同一个函数，搭出来的形状与机器认定的结构必然一致。
+     * 取不到（不是模块机 / 档位非法 / 实现内部抛异常）就静默退回主结构，与老代码同款。
      */
-    @Suppress("UNUSED_PARAMETER")
     private fun selectPattern(controller: MultiblockControllerMachine, module: Int): BlockPattern? {
         return try {
-            // TODO(模块化切片)：module > 0 时这里要改成取模块机的第 module 档结构
+            val pattern = if (module > 0 && controller is ETModularMachine) {
+                controller.patternForTier(module)
+            } else {
+                controller.defaultStructurePattern
+            }
             // 规划器只吃具体的 BlockPattern（可展开图案 ExpandablePattern 到不了这里）；判型失败即本次空转
-            controller.defaultStructurePattern as? BlockPattern
+            pattern as? BlockPattern
         } catch (ignored: Throwable) {
             null
         }

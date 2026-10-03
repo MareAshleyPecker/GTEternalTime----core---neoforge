@@ -19,6 +19,7 @@ import rain.fox.gtetcore.data.lang.Ae2Lang
 import rain.fox.gtetcore.data.lang.JadeLang
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import rain.fox.gtetcore.data.lang.MasterTowerLang
+import rain.fox.gtetcore.data.lang.ModuleLang
 import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
 import rain.fox.gtetcore.data.lang.StructureToolLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
@@ -148,6 +149,8 @@ class CommonProxy {
         JadeLang.register()
         // 结构工具三件道具 + 导出面板的文案
         StructureToolLang.register()
+        // 模块化多方块：基类 / 模块单元 / 模块主机 / 试验台的全部文案键
+        ModuleLang.register()
     }
 
     /**
