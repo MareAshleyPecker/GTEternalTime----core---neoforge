@@ -292,6 +292,26 @@ net.neoforged.fml.ModLoadingException: Loading errors encountered:
 
 ---
 
+## 13. 机器的物品输出面「怎么设都卡在同一个面」+ 侧面覆盖贴图不更新（严重度：高 · 状态：已修；GTM 自身的同步字段名笔误）
+
+**一句话**：`AutoOutputTrait.setItemOutputDirection` 把脏标记打在了**不存在的字段名** `"outputFacingItems"` 上，而真正的字段叫 `itemOutputDirection` —— 于是物品输出面的改动**永远不会同步给客户端**，客户端一直显示初始值。
+
+**来源**：无报错、无异常（完全静默的行为错误）。
+
+**触发**：任何有 `AutoOutputTrait` 的机器（单方块电机器）设物品输出面 —— 无论用我们的配置页还是用扳手（不潜行点侧面），客户端看到的输出面都不变；侧面那张 `OUTPUT_OVERLAY` 覆盖贴图也不出现。
+
+**成因**（逐条证据）：
+
+- `SyncDataHolder.markClientSyncFieldDirty(String)`（`SyncDataHolder.java:49-52`）只是把**字符串**丢进 `dirtySyncFields` 集合；
+- 真正决定"哪些字段发给客户端"的是 `shouldSyncFieldToClient(field)`（`:198-202`）：`dirtySyncFields.contains(field.fieldName)` —— **按 Java 字段名匹配**；
+- `AutoOutputTrait.setItemOutputDirection`（`AutoOutputTrait.java:225`）标记的是 `"outputFacingItems"`，而字段真名是 `itemOutputDirection`（`:64`）→ **永远匹配不上**；
+- 客户端于是保留 `onMachineLoad`（`:127-130`）设的 `getFrontFacing().getOpposite()`（机器朝南时正好是**北面**）→ 现象就是"怎么点都卡在北面"；而 `MachineModel.java:277-301` 渲染用的也是这个陈旧的客户端字段，**所以覆盖贴图也永远不更新**；
+- 流体那一半是对的（`:214` 标记的 `"fluidOutputDirection"` 与字段名一致）⇒ **只有物品输出面这一半坏**。
+
+**处理**：新增 `src\main\java\rain\fox\gtetcore\mixin\gtm\AutoOutputTraitMixin.java`，用 `@Redirect` 把 `setItemOutputDirection` 里的 `markClientSyncFieldDirty` 调用改成传 `"itemOutputDirection"`（注册在 `gtetscore.mixins.json` 的通用段）。一条补丁同时修好"面设不上"和"侧面贴图不更新"。
+
+---
+
 ## 模板（新增条目时复制）
 
 ```markdown
