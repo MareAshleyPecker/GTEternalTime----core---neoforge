@@ -101,3 +101,11 @@ type = "optional"
 versionRange = "[${emi_version},)"
 ordering = "AFTER"
 side = "CLIENT"
+
+# Jade（可选）：机器信息 HUD。没装不崩 —— 集成类只在 Jade 在场时由它自己扫描加载。
+[[dependencies."${mod_id}"]]
+modId = "jade"
+type = "optional"
+versionRange = "[${jade_version},)"
+ordering = "AFTER"
+side = "BOTH"

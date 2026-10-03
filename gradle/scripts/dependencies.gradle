@@ -23,7 +23,11 @@ dependencies {
 
     // ── 阶段 3（可选）：AE2 / Jade 集成 ──
     // compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
-    // compileOnly "maven.modrinth:jade:${jade_version}"
+
+    // ── Jade（可选依赖，坐标与版本对齐 GTM 的 gradle/forge.versions.toml:97）──
+    // runtimeOnly 是给 dev 客户端用的：不放进运行期就进不了游戏验证。
+    compileOnly "maven.modrinth:jade:${jade_version}"
+    runtimeOnly "maven.modrinth:jade:${jade_version}"
 
     // ── 配方查看器：JEI（1.21.1 的坐标是 neoforge，不是 forge）──
     compileOnly "mezz.jei:jei-1.21.1-common-api:${jei_version}"
