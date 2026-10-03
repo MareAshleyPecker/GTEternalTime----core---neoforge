@@ -65,8 +65,14 @@ object ETMasterTower {
             .appearanceBlock(GTBlocks.CASING_STEEL_SOLID)
             .pattern { definition ->
                 MultiblockPatternBuilder
-                    // slice 沿 UP 叠（第一个参数是 slice 方向），塔身因此竖着长出来；GTM 自己的 PSS 同款
-                    .start(RelativeDirection.UP, RelativeDirection.BACK, RelativeDirection.RIGHT)
+                    // slice 沿 UP 叠（第一个参数是 slice 方向），塔身因此竖着长出来；GTM 自己的 PSS 同款。
+                    // ⚠️ 第二个参数必须是 **FRONT**：它决定「同一 slice 里各行往哪边排」，而控制器 S 写在
+                    //    基座的**最后一行** —— 只有这样 S 才落在最靠前的那一行，结构整块在控制器**背后**，
+                    //    控制器的正面朝外。写成 BACK 会把结构前后镜像，控制器正面朝着塔里面（实机踩过）。
+                    // ⚠️ 老工程是 `FactoryBlockPattern.start(charDir=LEFT, stringDir=FRONT, aisleDir=UP)`，
+                    //    与新 API 的 `start(sliceDir, stringDir, charDir)` **参数顺序不同**，照位置抄会翻车；
+                    //    字符方向 LEFT/RIGHT 对本图案无影响（基座 "XSX"、塔身 "X X" 都左右对称）。
+                    .start(RelativeDirection.UP, RelativeDirection.FRONT, RelativeDirection.RIGHT)
                     // 基座：3×3 实心，控制器嵌在一侧墙里
                     .slice("XXX", "XXX", "XSX")
                     // 塔身段：3×3 环、中心空腔；可重复 1~MAX_SEGMENTS 段

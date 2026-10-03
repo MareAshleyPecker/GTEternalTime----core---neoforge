@@ -75,6 +75,8 @@ object ETTestMultiblocks {
                     // 8.0.0 的 `aisle` 改叫 `slice`；无参 `start()` 就是默认三轴（GTM 自己的多方块也用它）。
                     // 3×3×3 立方体对轴向不敏感：3 个 slice × 每 slice 3 行 × 每行 3 字符，
                     // 中间那层的 `X X` 就是空腔，控制器嵌在第三个 slice 的中行中列。
+                    // ⚠️ 已知问题（用户要求先不改）：8.0.0 无参默认是 `(sliceDir=BACK, ...)`，而 S 写在第三个
+                    //    slice ⇒ 结构会被排到控制器**前面**、控制器正面朝里。要修就把第一个参数换成 FRONT。
                     .start()
                     .slice("XXX", "XXX", "XXX")
                     .slice("XXX", "X X", "XXX")
