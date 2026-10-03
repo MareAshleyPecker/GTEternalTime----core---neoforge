@@ -39,8 +39,20 @@ object MachineIoConfigLang {
     const val FACE_SHORT_EAST: String = "$PREFIX.face.short.east"
     const val FACE_SHORT_WEST: String = "$PREFIX.face.short.west"
 
-    /** 展开图小格的 tooltip：怎么点。 */
+    /** 六面图小格的 tooltip：怎么点。 */
     const val FACE_CELL_TIP: String = "$PREFIX.face.tip"
+
+    /** 六面图小格的 tooltip：该面是机器正面，设不上（GTM 会直接拒绝）。 */
+    const val FACE_CELL_FRONT: String = "$PREFIX.face.front"
+
+    /** 四个开关的 tooltip（`%s` 填 [STATE_ON] / [STATE_OFF]）。 */
+    const val TOGGLE_AUTO_ITEM: String = "$PREFIX.toggle.auto_item"
+    const val TOGGLE_AUTO_FLUID: String = "$PREFIX.toggle.auto_fluid"
+    const val TOGGLE_ALLOW_IN_ITEM: String = "$PREFIX.toggle.allow_in_item"
+    const val TOGGLE_ALLOW_IN_FLUID: String = "$PREFIX.toggle.allow_in_fluid"
+
+    const val STATE_ON: String = "$PREFIX.state.on"
+    const val STATE_OFF: String = "$PREFIX.state.off"
 
     private val FACE_KEYS: Map<Direction, String> = mapOf(
         Direction.UP to FACE_UP,
@@ -68,7 +80,7 @@ object MachineIoConfigLang {
     @JvmStatic
     fun register() {
         LangUtil.add(TITLE, "I/O Configuration", "输入输出配置")
-        LangUtil.add(BUTTON, "Open the 3D I/O configuration page", "打开 3D 输入输出配置页")
+        LangUtil.add(BUTTON, "Open the I/O configuration page", "打开输入输出配置页")
         LangUtil.add(HINT_ITEM, "Left-click a face: set it as the item output side", "左键点面：设为物品输出面")
         LangUtil.add(HINT_FLUID, "Right-click a face: set it as the fluid output side", "右键点面：设为流体输出面")
         LangUtil.add(FACE_ITEM, "Item output: %s", "物品输出面：%s")
@@ -92,6 +104,23 @@ object MachineIoConfigLang {
             FACE_CELL_TIP, "Left-click: set as the item output side; right-click: set as the fluid output side",
             "左键：设为物品输出面；右键：设为流体输出面"
         )
+        LangUtil.add(
+            FACE_CELL_FRONT, "This is the machine's front face - it cannot be set as an output side",
+            "该面是机器正面，不能设为输出面"
+        )
+
+        LangUtil.add(TOGGLE_AUTO_ITEM, "Auto-output items: %s", "自动输出物品：%s")
+        LangUtil.add(TOGGLE_AUTO_FLUID, "Auto-output fluids: %s", "自动输出流体：%s")
+        LangUtil.add(
+            TOGGLE_ALLOW_IN_ITEM, "Allow input from the item output side: %s",
+            "允许从物品输出面输入：%s"
+        )
+        LangUtil.add(
+            TOGGLE_ALLOW_IN_FLUID, "Allow input from the fluid output side: %s",
+            "允许从流体输出面输入：%s"
+        )
+        LangUtil.add(STATE_ON, "ON", "开")
+        LangUtil.add(STATE_OFF, "OFF", "关")
     }
 
     /** 绝对朝向 → 语言键。 */

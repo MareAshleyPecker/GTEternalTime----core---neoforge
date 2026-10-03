@@ -6,22 +6,17 @@ import brachy.modularui.api.IPacketWriter
 import brachy.modularui.api.ISyncedAction
 import brachy.modularui.api.drawable.IDrawable
 import brachy.modularui.api.drawable.Text
-import brachy.modularui.api.widget.IGuiAction
 import brachy.modularui.api.widget.IWidget
 import brachy.modularui.drawable.DynamicDrawable
 import brachy.modularui.drawable.GuiTextures
 import brachy.modularui.drawable.Rectangle
-import brachy.modularui.drawable.schema.BaseSchemaRenderer
-import brachy.modularui.drawable.schema.BlockHighlight
-import brachy.modularui.drawable.schema.MapSchema
-import brachy.modularui.screen.viewport.ModularGuiContext
-import brachy.modularui.theme.WidgetThemeEntry
+import brachy.modularui.drawable.UITexture
 import brachy.modularui.utils.Color
 import brachy.modularui.value.BoolValue
+import brachy.modularui.value.sync.BooleanSyncValue
 import brachy.modularui.value.sync.PanelSyncManager
 import brachy.modularui.widget.ParentWidget
 import brachy.modularui.widgets.ButtonWidget
-import brachy.modularui.widgets.SchemaWidget
 import brachy.modularui.widgets.TextWidget
 import brachy.modularui.widgets.ToggleButton
 import brachy.modularui.widgets.layout.Flow
@@ -29,52 +24,46 @@ import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.machine.mui.MachineUIPanel
 import com.gregtechceu.gtceu.common.machine.trait.AutoOutputTrait
 import com.gregtechceu.gtceu.common.mui.GTGuiTextures
-import com.gregtechceu.gtceu.integration.recipeviewer.widgets.GTMultiblockSchemaRenderer
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer
-import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.chat.Component
-import net.minecraft.world.level.Level
-import net.minecraft.world.level.block.state.BlockState
-import net.minecraft.world.phys.HitResult
-import org.apache.logging.log4j.Level as LogLevel
-import org.joml.Vector3f
-import org.joml.Vector3fc
-import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier
-import kotlin.math.atan2
 
-/** 3D 配置页的同步动作名（`PanelSyncManager.registerSyncedAction` 的键，加命名空间避免与 GTM 撞）。 */
+/** 配置页的同步动作名（`PanelSyncManager.registerSyncedAction` 的键，加命名空间避免与 GTM 撞）。 */
 private const val ACTION_ITEM = "gtetscore:io_config_item"
 private const val ACTION_FLUID = "gtetscore:io_config_fluid"
 
-/** 假 schema 里单格方块的坐标。 */
-private val SCHEMA_ORIGIN: BlockPos = BlockPos.ZERO
+/** 四个开关的同步值键；显式命名，免得跟 GTM 塞在右侧配置列里的那几个匿名同名值撞键。 */
+private const val SYNC_AUTO_ITEM = "gtetscore_io_auto_item"
+private const val SYNC_AUTO_FLUID = "gtetscore_io_auto_fluid"
+private const val SYNC_ALLOW_IN_ITEM = "gtetscore_io_allow_in_item"
+private const val SYNC_ALLOW_IN_FLUID = "gtetscore_io_allow_in_fluid"
 
-/** 方块的几何中心；`SchemaWidget.draw` 每帧拿它当相机 lookAt（见 [MachineSchema] / [IoSchemaWidget]）。 */
-private val SCHEMA_FOCUS: Vector3f = Vector3f(0.5f, 0.5f, 0.5f)
+/** 六面图：格边长、格间距、开关边长。 */
+private const val FACE_CELL_SIZE = 26
+private const val CELL_GAP = 2
+private const val TOGGLE_SIZE = 18
 
-/** `SchemaWidget.scale` 就是 `Camera.setLookAtAndAngle` 的第 4 个参数 dist（单位：格）。 */
-private const val SCHEMA_DISTANCE = 2.0f
-
-/** 主面之外的额外偏角，露出一个邻面，避免正对着看成一堵墙。 */
-private const val SCHEMA_YAW_OFFSET = 0.6f
-
-/** 机器没有朝向（`hasFrontFacing() == false`）时的兜底视角。 */
-private const val SCHEMA_YAW_FALLBACK = 0.7853982f
-private const val HIGHLIGHT_THICKNESS = 1f / 32f
-
-/** 展开图小格的边长与格间距。 */
-private const val FACE_CELL_SIZE = 20
-private const val FACE_CELL_GAP = 2
-
-/** 六个面的展示顺序：上、北、东、南、西、下。 */
-private val FACE_ROW_ORDER = listOf(
-    Direction.UP, Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.DOWN
+/**
+ * 六个面在展开图里的落位（面, 列, 行）。
+ *
+ * ⚠️ 显式写 `Direction` 常量，**绝不**拿列表下标当协议：`Direction` 的 ordinal 顺序是
+ * DOWN, UP, NORTH, SOUTH, WEST, EAST，跟这里的显示顺序毫无关系。
+ */
+private val FACE_LAYOUT: List<Triple<Direction, Int, Int>> = listOf(
+    Triple(Direction.UP, 1, 0),
+    Triple(Direction.WEST, 0, 1),
+    Triple(Direction.NORTH, 1, 1),
+    Triple(Direction.EAST, 2, 1),
+    Triple(Direction.SOUTH, 3, 1),
+    Triple(Direction.DOWN, 1, 2)
 )
+
+private const val GRID_WIDTH = 4 * FACE_CELL_SIZE + 3 * CELL_GAP
+private const val GRID_HEIGHT = 3 * FACE_CELL_SIZE + 2 * CELL_GAP
 
 private val BACKDROP_UNDERLAY: Int = Color.argb(255, 24, 26, 30)
 private val ITEM_FACE_COLOR: Int = Color.argb(255, 60, 220, 90)
@@ -82,7 +71,6 @@ private val FLUID_FACE_COLOR: Int = Color.argb(255, 70, 170, 255)
 private val BOTH_FACE_COLOR: Int = Color.argb(255, 60, 200, 170)
 private val IDLE_FACE_COLOR: Int = Color.argb(255, 58, 62, 70)
 private val CELL_TEXT_COLOR: Int = Color.argb(255, 255, 255, 255)
-private val HOVER_FACE_COLOR: Int = Color.argb(160, 255, 255, 255)
 
 /**
  * 「输入输出配置页」的装配点。
@@ -124,14 +112,11 @@ object MachineIoConfig {
 }
 
 /**
- * 单格机器的输入输出配置页（覆盖整个机器面板，默认隐藏）。
+ * 单格机器的输入输出配置页（覆盖整个机器面板，默认隐藏），照 TE / Mek 那种六面图。
  *
- * 3D 视图：GTMultiblockSchemaRenderer（GTMultiblockSchemaRenderer.java:10）+ MapSchema
- * （brachy.modularui.drawable.schema.MapSchema）+ [IoSchemaWidget]；面点击读数走
- * `BaseSchemaRenderer#lastRayTrace`，先例 MultiblockPreviewWidget.java:111-123。
- *
- * 输出面状态用页面下方的**六面展开图**表达（[createFaceRow]）：那条路不依赖 3D 渲染管线，
- * 而且六个小格本身就能设 I/O，比在 3D 里点面稳。
+ * 只用 GTM 真实支持的语义：物品输出面 / 流体输出面（各可为空，AutoOutputTrait.java:61-80）
+ * + 自动输出开关 + 允许从输出面输入开关（:192-206、:184-190），
+ * 不做「每面独立输入/输出/禁用」那种 GTM 没有的矩阵。
  *
  * @author rain fox
  */
@@ -144,6 +129,16 @@ class MachineIoConfigPage(
 
     private val itemSupported: Boolean = trait.supportsAutoOutputItems()
     private val fluidSupported: Boolean = trait.supportsAutoOutputFluids()
+
+    // 四个开关各一个显式命名的 C2S 同步值（setter 只在服务端跑）
+    private val autoItemSync = boolSync(SYNC_AUTO_ITEM, { trait.isAutoOutputItems() },
+        { trait.setAllowAutoOutputItems(it) })
+    private val autoFluidSync = boolSync(SYNC_AUTO_FLUID, { trait.isAutoOutputFluids() },
+        { trait.setAllowAutoOutputFluids(it) })
+    private val allowInItemSync = boolSync(SYNC_ALLOW_IN_ITEM, { trait.allowsItemInputFromOutputSide() },
+        { trait.setAllowItemInputFromOutputSide(it) })
+    private val allowInFluidSync = boolSync(SYNC_ALLOW_IN_FLUID, { trait.allowsFluidInputFromOutputSide() },
+        { trait.setAllowFluidInputFromOutputSide(it) })
 
     init {
         name("gtetscore_io_config")
@@ -174,9 +169,9 @@ class MachineIoConfigPage(
                 .padding(6)
                 .childPadding(3)
                 .child(IoLabel(Text.lang(MachineIoConfigLang.TITLE)).widthRel(1f).height(12))
-                .child(createPreview().expanded().widthRel(1f))
-                .child(createFaceRow())
+                .child(createFaceDiagram())
                 .child(IoLabel(Supplier { statusText() }).widthRel(1f).height(20))
+                .child(createToggles())
         )
 
         child(
@@ -198,80 +193,27 @@ class MachineIoConfigPage(
         siblings.forEach { sibling -> sibling.isEnabled = !open }
     }
 
-    // ======================== 3D 视图 ========================
+    // ======================== 六面图 ========================
 
-    private fun createPreview(): IoBox {
-        val box = IoBox().name("io_config_preview").sizeRel(1f)
-        val level = machine.level ?: return box
-        if (!level.isClientSide) return box
-        try {
-            box.child(buildSchemaWidget(level))
-        } catch (t: Throwable) {
-            // 3D 搭不出来不能连带整台机器的界面打不开
-            GTETSCore.LOGGER.log(LogLevel.WARN, "[GTET-TEST] 3D 输入输出页渲染器构建失败", t)
-        }
+    private fun createFaceDiagram(): IWidget {
+        val box = IoBox().name("io_config_faces").size(GRID_WIDTH, GRID_HEIGHT)
+        FACE_LAYOUT.forEach { (face, col, row) -> box.child(faceCell(face, col, row)) }
         return box
     }
 
-    private fun buildSchemaWidget(level: Level): IWidget {
-        val renderer = GTMultiblockSchemaRenderer(MachineSchema(level.getBlockState(machine.blockPos)))
-        renderer.highlightRenderer(BlockHighlight(HOVER_FACE_COLOR, HIGHLIGHT_THICKNESS))
-        // ⚠️ SchemaRenderer 构造器把 rayTracing 初始化成 false，不打开就没有 lastRayTrace()：
-        //    面点击与 hover 高亮两条路全是死的（SchemaRenderer ctor 字节码 iconst_0 → putfield rayTracing）
-        renderer.rayTracing(true)
-
-        return IoSchemaWidget(renderer)
-            .name("io_config_schema")
-            .sizeRel(1f)
-            .scale(SCHEMA_DISTANCE)
-            .yaw(yawFacingCameraAt(mainFace()))
-            .enableDragRotation(true)
-            .enableScrollScaling(true)
-            // 中键拖动改的是 offset（SchemaWidget.onMouseDrag 的 button == 2 分支），关掉
-            .enableDragTranslation(false)
-            .listenGuiAction(IGuiAction.MouseReleased { _, button -> onFaceClicked(renderer, button) })
-            .tooltipAutoUpdate(true)
-            .tooltipDynamic { r ->
-                r.addLine(Text.lang(MachineIoConfigLang.HINT_ITEM))
-                r.addLine(Text.lang(MachineIoConfigLang.HINT_FLUID))
-            }
-    }
-
-    /** 机器贴图的主面（furnace 面）。 */
-    private fun mainFace(): Direction =
-        if (machine.hasFrontFacing()) machine.frontFacing else Direction.NORTH
-
-    /**
-     * 让相机落在主面那一侧的 3/4 视角。
-     *
-     * `SchemaWidget.draw` 每帧按 `pos = lookAt + normalize(cos yaw, tan pitch, sin yaw) * dist` 反推相机位置，
-     * 水平方向就是 `(cos yaw, sin yaw)` —— 用主面的 (stepX, stepZ) 反解 yaw，再加 [SCHEMA_YAW_OFFSET] 露一个邻面。
-     */
-    private fun yawFacingCameraAt(front: Direction): Float {
-        val stepX = front.stepX
-        val stepZ = front.stepZ
-        if (stepX == 0 && stepZ == 0) return SCHEMA_YAW_FALLBACK
-        return atan2(stepZ.toFloat(), stepX.toFloat()) + SCHEMA_YAW_OFFSET
-    }
-
-    // ======================== 六面展开图 ========================
-
-    /** 一行六个面格：底色 = 当前该面是不是物品 / 流体输出面；左键设物品、右键设流体。 */
-    private fun createFaceRow(): IWidget =
-        Flow.row()
-            .name("io_config_faces")
-            .size(FACE_ROW_ORDER.size * FACE_CELL_SIZE + (FACE_ROW_ORDER.size - 1) * FACE_CELL_GAP, FACE_CELL_SIZE)
-            .childPadding(FACE_CELL_GAP)
-            .apply { FACE_ROW_ORDER.forEach { face -> child(faceCell(face)) } }
-
-    private fun faceCell(face: Direction): IWidget =
+    private fun faceCell(face: Direction, col: Int, row: Int): IWidget =
         IoButton()
             .size(FACE_CELL_SIZE)
+            .pos(col * (FACE_CELL_SIZE + CELL_GAP), row * (FACE_CELL_SIZE + CELL_GAP))
             .background(DynamicDrawable(Supplier<IDrawable> { Rectangle().color(faceCellColor(face)).solid() }))
-            .child(IoLabel(Supplier { Text.lang(MachineIoConfigLang.shortFaceKey(face)) }).center().color(CELL_TEXT_COLOR))
+            .child(
+                IoLabel(Supplier { Text.lang(MachineIoConfigLang.shortFaceKey(face)) })
+                    .center().color(CELL_TEXT_COLOR)
+            )
             .tooltipAutoUpdate(true)
             .tooltipBuilder { tip ->
                 tip.addLine(Text.lang(MachineIoConfigLang.faceKey(face)))
+                if (isFrontFace(face)) tip.addLine(Text.lang(MachineIoConfigLang.FACE_CELL_FRONT))
                 tip.addLine(Text.lang(MachineIoConfigLang.FACE_CELL_TIP))
             }
             .onMousePressed { _, button ->
@@ -293,22 +235,66 @@ class MachineIoConfigPage(
         }
     }
 
-    // ======================== 面点击 → I/O ========================
+    /** 正面不能设成输出面：`setItemOutputDirection` 会直接 return（AutoOutputTrait.java:221-222）。 */
+    private fun isFrontFace(face: Direction): Boolean = machine.hasFrontFacing() && machine.frontFacing == face
 
-    /** 左键 = 物品输出面，右键 = 流体输出面（对齐 1.20.1 的手感）。 */
-    private fun onFaceClicked(renderer: GTMultiblockSchemaRenderer, button: Int): Boolean {
-        val hit = renderer.lastRayTrace() ?: return false
-        if (hit.type != HitResult.Type.BLOCK) return false
-        return when (button) {
-            0 -> sendDirection(hit.direction, true)
-            1 -> sendDirection(hit.direction, false)
-            else -> false
+    // ======================== 四个开关 ========================
+
+    private fun createToggles(): IWidget {
+        val toggles = ArrayList<IWidget>(4)
+        if (itemSupported) {
+            toggles.add(
+                toggleButton(autoItemSync, GTGuiTextures.BUTTON_ITEM_OUTPUT,
+                    Supplier { onOffLine(MachineIoConfigLang.TOGGLE_AUTO_ITEM, autoItemSync.boolValue) })
+            )
+            toggles.add(
+                toggleButton(allowInItemSync, GTGuiTextures.BUTTON_ITEM_ALLOW_INPUT_OUTPUT,
+                    Supplier { onOffLine(MachineIoConfigLang.TOGGLE_ALLOW_IN_ITEM, allowInItemSync.boolValue) })
+            )
         }
+        if (fluidSupported) {
+            toggles.add(
+                toggleButton(autoFluidSync, GTGuiTextures.BUTTON_FLUID_OUTPUT,
+                    Supplier { onOffLine(MachineIoConfigLang.TOGGLE_AUTO_FLUID, autoFluidSync.boolValue) })
+            )
+            toggles.add(
+                toggleButton(allowInFluidSync, GTGuiTextures.BUTTON_FLUID_ALLOW_INPUT_OUTPUT,
+                    Supplier { onOffLine(MachineIoConfigLang.TOGGLE_ALLOW_IN_FLUID, allowInFluidSync.boolValue) })
+            )
+        }
+
+        val width = toggles.size * TOGGLE_SIZE + (toggles.size - 1).coerceAtLeast(0) * CELL_GAP
+        val row = Flow.row().name("io_config_toggles").size(width, TOGGLE_SIZE).childPadding(CELL_GAP)
+        toggles.forEach { row.child(it) }
+        return row
     }
+
+    private fun toggleButton(value: BooleanSyncValue, texture: UITexture, tip: Supplier<Component>): IWidget =
+        ToggleButton()
+            .size(TOGGLE_SIZE)
+            .value(value)
+            .overlay(texture)
+            .tooltipAutoUpdate(true)
+            .tooltipDynamic { r -> r.addLine(tip.get()) }
+
+    private fun onOffLine(key: String, on: Boolean): Component = Component.translatable(
+        key, Text.lang(if (on) MachineIoConfigLang.STATE_ON else MachineIoConfigLang.STATE_OFF)
+    )
+
+    private fun boolSync(key: String, read: () -> Boolean, write: (Boolean) -> Unit): BooleanSyncValue {
+        // ⚠️ Kotlin 直接写 lambda 会撞上 (BooleanSupplier, BooleanConsumer) 的重载歧义，要显式写 SAM 类型
+        val value = BooleanSyncValue(BooleanSupplier { read() }, BooleanConsumer { updated -> write(updated) })
+            .allowC2S()
+        syncManager.syncValue(key, value)
+        return value
+    }
+
+    // ======================== 点面设 I/O ========================
 
     private fun sendDirection(face: Direction, items: Boolean): Boolean {
         if (items) {
             if (!itemSupported) return false
+            // 传的是 `Direction.ordinal`（枚举协议序），不是六面图的显示下标
             syncManager.callSyncedAction(ACTION_ITEM,
                 IPacketWriter<RegistryFriendlyByteBuf> { buf -> buf.writeVarInt(face.ordinal) })
         } else {
@@ -319,7 +305,7 @@ class MachineIoConfigPage(
         return true
     }
 
-    /** 服务端执行体；方向与开关都落在 trait 自己的同步字段上（AutoOutputTrait.java:61-80）。 */
+    /** 服务端执行体；方向与开关都落在 trait 自己的同步字段上（AutoOutputTrait.java:61-91）。 */
     private fun applyDirection(buf: RegistryFriendlyByteBuf, items: Boolean) {
         val ordinal = buf.readVarInt()
         val faces = Direction.entries.toTypedArray()
@@ -371,35 +357,5 @@ class MachineIoConfigPage(
 
         constructor(text: Component) : super(text)
         constructor(text: Supplier<Component>) : super(text)
-    }
-}
-
-/**
- * 单格 schema。
- *
- * `MapSchema` 对单格算出的 focus 是方块角点 (0,0,0)（BlockPosUtil.getCenterF），而
- * `SchemaWidget.draw` 每帧用 `schema.getFocus() + offset` 当相机 lookAt —— 不覆盖就会绕着角转。
- */
-private class MachineSchema(block: BlockState) : MapSchema(mapOf(SCHEMA_ORIGIN to block)) {
-
-    override fun getFocus(): Vector3fc = SCHEMA_FOCUS
-}
-
-/**
- * 每帧把 `offset` 校正回「当前 focus → 方块几何中心」的差值。
- *
- * `SchemaWidget.draw` 每帧拿 `schema.getFocus() + offset` 当相机 lookAt，而 `offset` 是随时可能被
- * relayout / 外部写到的可变字段；在 super.draw 之前重算一次，`focus + offset` 就恒等于方块中心。
- */
-private class IoSchemaWidget(renderer: BaseSchemaRenderer) : SchemaWidget(renderer) {
-
-    override fun draw(context: ModularGuiContext, theme: WidgetThemeEntry<*>) {
-        val focus = schemaRenderer.schema().getFocus()
-        offset(
-            SCHEMA_FOCUS.x - focus.x(),
-            SCHEMA_FOCUS.y - focus.y(),
-            SCHEMA_FOCUS.z - focus.z()
-        )
-        super.draw(context, theme)
     }
 }
