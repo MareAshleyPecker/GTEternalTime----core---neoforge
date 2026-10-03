@@ -7,8 +7,12 @@ import brachy.modularui.api.drawable.Text
 import brachy.modularui.api.widget.IWidget
 import brachy.modularui.drawable.DynamicDrawable
 import brachy.modularui.drawable.GuiTextures
+import brachy.modularui.drawable.ItemDrawable
 import brachy.modularui.drawable.Rectangle
+import brachy.modularui.drawable.SpriteDrawable
 import brachy.modularui.drawable.UITexture
+import brachy.modularui.screen.viewport.GuiContext
+import brachy.modularui.theme.WidgetTheme
 import brachy.modularui.value.BoolValue
 import brachy.modularui.value.sync.BooleanSyncValue
 import brachy.modularui.value.sync.IntSyncValue
@@ -23,10 +27,13 @@ import com.gregtechceu.gtceu.api.machine.mui.MachineUIPanel
 import com.gregtechceu.gtceu.common.machine.trait.AutoOutputTrait
 import com.gregtechceu.gtceu.common.mui.GTGuiTextures
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer
+import net.minecraft.client.Minecraft
 import net.minecraft.core.Direction
 import net.minecraft.network.chat.Component
-import org.apache.logging.log4j.Level as LogLevel
-import rain.fox.gtetcore.GTETSCore
+import net.minecraft.util.RandomSource
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.state.BlockState
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import java.util.function.BooleanSupplier
 import java.util.function.IntConsumer
@@ -44,13 +51,22 @@ private const val SYNC_ALLOW_IN_FLUID = "gtetscore_io_allow_in_fluid"
 /** 「没有输出面」在同步值里的编码（`Direction.ordinal` 用不到它）。 */
 private const val NO_FACE = -1
 
-/** 六面图：格边长、格间距、开关边长。 */
-private const val FACE_CELL_SIZE = 26
+/** 小框尺寸、格边长、格间距、开关边长。 */
+private const val BOX_WIDTH = 88
+private const val BOX_HEIGHT = 142
+private const val FACE_CELL_SIZE = 24
 private const val CELL_GAP = 2
-private const val TOGGLE_SIZE = 18
+private const val TOGGLE_SIZE = 16
+
+/** 格子里的状态色蒙层 alpha 与描边宽度（贴图当前景太抢眼，状态得压得住）。 */
+private const val STATE_TINT_ALPHA = 120
+private const val FACE_CELL_BORDER = 3f
+
+/** 取邻居面贴图用的固定随机源种子（模型烘焙要求传 RandomSource）。 */
+private const val SPRITE_SEED = 42L
 
 /**
- * 六个面槽在六面图里的落位（槽, 列, 行）；左上角 (0,0) 刻意留空。
+ * 六个面槽在小框里的落位（槽, 列, 行）；左上角 (0,0) 刻意留空。
  *
  * ```
  *   [空]  [顶]
@@ -91,8 +107,17 @@ private val BOTH_FACE_COLOR: Int = 0xFF3CC8AA.toInt()
 private val IDLE_FACE_COLOR: Int = 0xFF3A3E46.toInt()
 private val CELL_TEXT_COLOR: Int = 0xFFFFFFFF.toInt()
 
+/** 只换 alpha 字节（颜色常量都是 `0xAARRGGBB`）。 */
+private fun tint(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha shl 24)
+
+/** 同步值里的 `Direction.ordinal` 还原；[NO_FACE] 或越界都返回 null。 */
+private fun faceOf(ordinal: Int): Direction? {
+    val faces = Direction.entries.toTypedArray()
+    return if (ordinal < 0 || ordinal >= faces.size) null else faces[ordinal]
+}
+
 /**
- * 「输入输出配置页」的装配点。
+ * 「输入输出配置小框」的装配点。
  *
  * 由 [rain.fox.gtetcore.mixin.gtm.MachineUIPanelBuilderMixin] 在
  * `MachineUIPanelBuilder#build` 的 RETURN 处调用（MachineUIPanelBuilder.java:78）。
@@ -109,10 +134,7 @@ object MachineIoConfig {
         val trait = machine.getTrait(AutoOutputTrait::class.java) ?: return
         if (!trait.supportsAutoOutputItems() && !trait.supportsAutoOutputFluids()) return
 
-        // 页面加进 panel 之前先快照同层子件（titleBar / 两个配置列 / panelContents）
-        val siblings = panel.children.toList()
-
-        val page = MachineIoConfigPage(machine, trait, syncManager, siblings)
+        val page = MachineIoConfigPage(machine, trait, syncManager)
         val toggle = ToggleButton()
             .size(16)
             .overlay(GTGuiTextures.TOOL_IO_FACING_ROTATION)
@@ -131,27 +153,28 @@ object MachineIoConfig {
 }
 
 /**
- * 单格机器的输入输出配置页（覆盖整个机器面板，默认隐藏），照 TE / Mek 那种六面图。
+ * 单格机器的输入输出配置小框（居中的浮动小块，默认隐藏），照 TE / Mek 那种六面图。
  *
  * 只用 GTM 真实支持的语义：物品输出面 / 流体输出面（各可为空，AutoOutputTrait.java:61-80）
  * + 自动输出开关 + 允许从输出面输入开关（:192-206、:184-190），
  * 不做「每面独立输入/输出/禁用」那种 GTM 没有的矩阵。
+ *
+ * 每格背景画的是**相邻方块朝机器那一面的贴图**（邻居自己的 `face.getOpposite()` 面），
+ * 上面再叠状态色蒙层与描边。
  *
  * @author rain fox
  */
 class MachineIoConfigPage(
     private val machine: MetaMachine,
     private val trait: AutoOutputTrait,
-    private val syncManager: PanelSyncManager,
-    private val siblings: List<IWidget>
+    private val syncManager: PanelSyncManager
 ) : ParentWidget<MachineIoConfigPage>() {
 
     private val itemSupported: Boolean = trait.supportsAutoOutputItems()
     private val fluidSupported: Boolean = trait.supportsAutoOutputFluids()
 
     // 四个开关 + 两条「输出面」各一个显式命名的 C2S 同步值（setter 只在服务端跑）。
-    // ⚠️ 输出面**不再走** registerSyncedAction/callSyncedAction：那条路实机点不动（见 S1.8 报告），
-    //    这里改用 MUI 通用的同步值通道，和下面四个开关同一条路。
+    // ⚠️ 输出面**不走** registerSyncedAction/callSyncedAction：那条路实机点不动，见项目笔记 S1.8。
     private val itemFaceSync = faceSync(SYNC_ITEM_FACE, { trait.itemOutputDirection },
         { trait.setItemOutputDirection(it) })
     private val fluidFaceSync = faceSync(SYNC_FLUID_FACE, { trait.fluidOutputDirection },
@@ -168,8 +191,8 @@ class MachineIoConfigPage(
 
     init {
         name("gtetscore_io_config")
-        pos(0, 0)
-        sizeRel(1f)
+        size(BOX_WIDTH, BOX_HEIGHT)
+        center()
         background(GTGuiTextures.BACKGROUND)
         excludeAreaInRecipeViewer()
         isEnabled = false
@@ -182,9 +205,9 @@ class MachineIoConfigPage(
             Flow.col()
                 .name("io_config_body")
                 .sizeRel(1f)
-                .padding(6)
+                .padding(5)
                 .childPadding(3)
-                .child(IoLabel(Text.lang(MachineIoConfigLang.TITLE)).widthRel(1f).height(12))
+                .child(IoLabel(Text.lang(MachineIoConfigLang.TITLE)).widthRel(1f).height(10))
                 .child(createFaceDiagram())
                 .child(IoLabel(Supplier { statusText() }).widthRel(1f).height(20))
                 .child(createToggles())
@@ -192,9 +215,9 @@ class MachineIoConfigPage(
 
         child(
             IoButton()
-                .size(12)
-                .right(4)
-                .top(4)
+                .size(10)
+                .right(3)
+                .top(3)
                 .overlay(GuiTextures.CLOSE)
                 .onMousePressed { _, _ ->
                     setPageOpen(false)
@@ -203,10 +226,9 @@ class MachineIoConfigPage(
         )
     }
 
-    /** 开 / 关这一页；同时把同层的机器界面子件一起关掉，免得盖不严时透底。 */
+    /** 只切自己的显示；机器界面照旧在框外围可用。 */
     fun setPageOpen(open: Boolean) {
         isEnabled = open
-        siblings.forEach { sibling -> sibling.isEnabled = !open }
     }
 
     // ======================== 六面图 ========================
@@ -219,14 +241,19 @@ class MachineIoConfigPage(
 
     private fun faceCell(slot: FaceSlot, col: Int, row: Int): IWidget {
         val face = slotDirection(slot)
-        return IoButton()
+        val cell = IoButton()
             .size(FACE_CELL_SIZE)
             .pos(col * (FACE_CELL_SIZE + CELL_GAP), row * (FACE_CELL_SIZE + CELL_GAP))
-            .background(DynamicDrawable(Supplier<IDrawable> { Rectangle().color(faceCellColor(face)).solid() }))
-            .child(
-                IoLabel(Supplier { Text.lang(slot.shortKey) })
-                    .center().color(CELL_TEXT_COLOR)
-            )
+
+        // 邻居贴图只在客户端取；服务端只铺状态色，两端 widget 树保持一致
+        if (machine.level?.isClientSide == true) {
+            cell.background(FaceCellIcon(face))
+        } else {
+            cell.background(DynamicDrawable(Supplier<IDrawable> { Rectangle().color(faceCellColor(face)).solid() }))
+        }
+
+        return cell
+            .child(IoLabel(Supplier { Text.lang(slot.shortKey) }).center().color(CELL_TEXT_COLOR))
             .tooltipAutoUpdate(true)
             .tooltipBuilder { tip ->
                 tip.addLine(Text.lang(slot.langKey))
@@ -242,7 +269,7 @@ class MachineIoConfigPage(
             }
     }
 
-    /** 底色读的是同步值（客户端拿到的是服务端值；自己点完那一刻是本地乐观值），所以点完立刻变色。 */
+    /** 底色读同步值（客户端拿到服务端值；自己点完那一刻是本地乐观值），所以点完立刻变色。 */
     private fun faceCellColor(face: Direction): Int {
         val items = itemSupported && itemFaceSync.intValue == face.ordinal
         val fluids = fluidSupported && fluidFaceSync.intValue == face.ordinal
@@ -352,11 +379,7 @@ class MachineIoConfigPage(
         // ⚠️ 同样要显式写 SAM 类型，否则撞上 (IntSupplier, IntSupplier) 的重载
         val value = IntSyncValue(
             IntSupplier { read()?.ordinal ?: NO_FACE },
-            IntConsumer { ordinal ->
-                // TODO(临时诊断 S1.8)：确认服务端有没有收到这个同步值之后删掉
-                GTETSCore.LOGGER.log(LogLevel.INFO, "[GTET-TEST] io page server apply: key={} ordinal={}", key, ordinal)
-                faceOf(ordinal)?.let(write)
-            }
+            IntConsumer { ordinal -> faceOf(ordinal)?.let(write) }
         ).allowC2S()
         syncManager.syncValue(key, value)
         return value
@@ -365,8 +388,6 @@ class MachineIoConfigPage(
     // ======================== 点面设 I/O ========================
 
     private fun setOutputFace(face: Direction, items: Boolean) {
-        // TODO(临时诊断 S1.8)：确认「点面」到底有没有送到这里之后删掉
-        GTETSCore.LOGGER.log(LogLevel.INFO, "[GTET-TEST] io page click: face={} items={}", face, items)
         if (items) {
             if (itemSupported) itemFaceSync.intValue = face.ordinal
         } else {
@@ -404,6 +425,61 @@ class MachineIoConfigPage(
 
     private fun directionName(direction: Direction?): Component = relativeName(direction)
 
+    // ======================== 格子的邻居面贴图 ========================
+
+    /**
+     * 格子背景：先画相邻方块**朝机器那一面**（邻居自己的 `face.getOpposite()`）的贴图，
+     * 再叠状态色蒙层 + 不透明粗描边，保证贴图与状态都看得清。
+     *
+     * 只在客户端构造（服务端不建，见 [faceCell]）。邻居方块换了才重建贴图，
+     * 每帧只做一次 `getBlockState`（区块缓存，很便宜），不重复烘模型。
+     */
+    private inner class FaceCellIcon(private val face: Direction) : IDrawable {
+
+        private var cachedBlock: Block? = null
+        private var cachedIcon: IDrawable? = null
+
+        override fun draw(context: GuiContext, x: Int, y: Int, w: Int, h: Int, theme: WidgetTheme) {
+            neighbourIcon()?.draw(context, x, y, w, h, theme)
+
+            val color = faceCellColor(face)
+            Rectangle().color(tint(color, STATE_TINT_ALPHA)).solid().draw(context, x, y, w, h, theme)
+            Rectangle().color(color).hollow(FACE_CELL_BORDER).draw(context, x, y, w, h, theme)
+        }
+
+        private fun neighbourIcon(): IDrawable? {
+            val level = machine.level ?: return null
+            val state = level.getBlockState(machine.blockPos.relative(face))
+            if (state.isAir) return null
+            if (state.block !== cachedBlock) {
+                cachedBlock = state.block
+                cachedIcon = buildIcon(state, face)
+            }
+            return cachedIcon
+        }
+
+        /**
+         * 邻居朝机器的那一面 = 邻居自己的 `face.getOpposite()`。取不到就退回方块物品图标。
+         *
+         * 这里要的就是「不带 modelData 的默认外观」，所以用三参 `getQuads`；它在 1.21 被标了 Deprecated
+         * （NeoForge 另加了带 `ModelData`/`RenderType` 的 `IBakedModelExtension#getQuads`）。
+         */
+        @Suppress("DEPRECATION")
+        private fun buildIcon(state: BlockState, face: Direction): IDrawable? = try {
+            val sprite = Minecraft.getInstance().blockRenderer.getBlockModel(state)
+                .getQuads(state, face.opposite, RandomSource.create(SPRITE_SEED))
+                .firstOrNull()?.sprite
+            if (sprite != null) SpriteDrawable(sprite) else itemIcon(state)
+        } catch (t: Throwable) {
+            itemIcon(state)
+        }
+
+        private fun itemIcon(state: BlockState): IDrawable? {
+            val stack = ItemStack(state.block)
+            return if (stack.isEmpty) null else ItemDrawable(stack)
+        }
+    }
+
     // ======================== 自引用泛型的控件壳 ========================
     // MUI 这几只控件是 `Foo<W extends Foo<W>>`，Kotlin 里没法用菱形推断，链条会退回父类型。
 
@@ -426,10 +502,4 @@ private enum class FaceSlot(val langKey: String, val shortKey: String) {
     BOTTOM(MachineIoConfigLang.REL_BOTTOM, MachineIoConfigLang.REL_BOTTOM_SHORT),
     LEFT(MachineIoConfigLang.REL_LEFT, MachineIoConfigLang.REL_LEFT_SHORT),
     RIGHT(MachineIoConfigLang.REL_RIGHT, MachineIoConfigLang.REL_RIGHT_SHORT)
-}
-
-/** 同步值里的 `Direction.ordinal` 还原；[NO_FACE] 或越界都返回 null。 */
-private fun faceOf(ordinal: Int): Direction? {
-    val faces = Direction.entries.toTypedArray()
-    return if (ordinal < 0 || ordinal >= faces.size) null else faces[ordinal]
 }
