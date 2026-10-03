@@ -16,6 +16,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.InteractionResult
+import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.api.timeflow.ETTimeFlowHandler
 import rain.fox.gtetcore.api.timeflow.ITimeFlowStorage
 import rain.fox.gtetcore.api.timeflow.ITimeFlowTower
@@ -234,20 +235,60 @@ class TimeFlowHatchPartMachine(
         if (lvl.isClientSide) return
 
         val room = getTimeFlowRoom()
-        if (room <= 0L) return
+        val diag = --diagCooldown <= 0
+        if (diag) {
+            diagCooldown = DIAG_INTERVAL
+            diagLog("本仓 capacity=${getTimeFlowCapacity()} stored=${getTimeFlow()} room=$room")
+        }
+        if (room <= 0L) {
+            if (diag) diagLog("跳过：缓冲已满")
+            return
+        }
 
         // 未绑定 ⇒ 回落到全服唯一那座塔（多塔模式下 autoTower() 恒 null ⇒ 必须显式绑定）
-        val target = getBoundTower() ?: MasterTowerRegistry.autoTower() ?: return
-        if (target.dimension() != lvl.dimension()) return
+        val target = getBoundTower() ?: MasterTowerRegistry.autoTower()
+        if (target == null) {
+            if (diag) diagLog("跳过：没绑定塔、也没有 autoTower（isBound=$isBound）")
+            return
+        }
+        if (target.dimension() != lvl.dimension()) {
+            if (diag) diagLog("跳过：塔在别的维度 ${target.dimension().location()} @${target.pos()}")
+            return
+        }
 
-        val tower = TimeFlowTowers.find(lvl, target.pos()) ?: return
+        val tower = TimeFlowTowers.find(lvl, target.pos())
+        if (tower == null) {
+            if (diag) diagLog("跳过：find 不到塔 @${target.pos()}（区块未加载 / 那格不是塔）")
+            return
+        }
         // ⚠️ 「成型」在 8.0.0 是 MultiblockControllerMachine 上的 `isFormed`（IMultiController 已删）
-        if ((tower as? MultiblockControllerMachine)?.isFormed != true) return
+        if ((tower as? MultiblockControllerMachine)?.isFormed != true) {
+            if (diag) diagLog("跳过：塔没成型 @${target.pos()}")
+            return
+        }
         val owner = ownerUUID
-        if (owner != null && !tower.canUseTimeFlowByUuid(owner)) return
+        if (owner != null && !tower.canUseTimeFlowByUuid(owner)) {
+            if (diag) diagLog("跳过：本仓 owner=$owner 没权限用这座塔（塔 owner=${tower.getOwnerUuid()}）")
+            return
+        }
 
+        val towerTfBefore = tower.getTimeFlow()
         val got = tower.extractTimeFlow(room)
+        if (diag) diagLog("塔 stored（取之前）=$towerTfBefore got=$got 塔 stored（取之后）=${tower.getTimeFlow()}")
         if (got > 0L) tfHandler.insert(got)
+    }
+
+    // ================================================================
+    //  ⚠️ 临时诊断：定位「时序仓只拉到很小一个值」用，问题查清后整段删
+    // ================================================================
+
+    private var diagCooldown: Int = 0
+
+    /** 诊断日志间隔（tick）。 */
+    private val DIAG_INTERVAL: Int = 100
+
+    private fun diagLog(msg: String) {
+        GTETSCore.LOGGER.info("[GTET-TF] @{} {}", blockPos, msg)
     }
 
     // ================================================================
