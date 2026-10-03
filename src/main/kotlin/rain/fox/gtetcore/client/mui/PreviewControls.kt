@@ -43,30 +43,33 @@ object PreviewControls {
     }
 
     /**
-     * 挂按钮条；失败不能连带 GTM 自己的预览控件打不开。
+     * 挂按钮条（**只挂内嵌那份**）；失败不能连带 GTM 自己的预览控件打不开。
      *
      * `schemaWidth` = `MultiblockPreviewWidget` 构造器第 3 个参数，也就是 3D 控件自己的宽度
      * （`MultiblockPreviewWidget.java:192` 的 `.size(width, height)`），拿它算绝对坐标。
      */
     @JvmStatic
     fun attach(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition, schemaWidth: Int) {
+        // 全屏那份的按钮由 buildFullscreenPanel 直接钉在面板右下角，不挂进控件树
+        if (fullscreen) return
         try {
-            preview.child(buildRow(preview, definition, schemaWidth))
+            val row = createRow(preview, definition, false)
+            // 只给像素制的 left/top：right(int) / rightRel(float) 都要先知道父级宽度，而父级是
+            // `coverChildren()`（宽度反过来由子件撑出），是循环依赖 —— MUI 会先按未解析值摆一次，父级可能被撑大；
+            // 而 JEI 那边整框尺寸取自控件的固定尺寸，取不到就退回 getMaxWidth/getMaxHeight = 200x180
+            // （MultiblockInfoJeiCategory.java:56-63 → ModularUIJeiCategory.getWidth(recipe)），父级一变大框就跟着变。
+            // 用构造参数里的 3D 控件宽度直接算绝对坐标，父级尺寸与这排按钮无关。
+            row.left(SCHEMA_X + schemaWidth - ROW_WIDTH - 2).top(2)
+            preview.child(row)
         } catch (t: Throwable) {
             GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 挂载多方块预览控制按钮失败", t)
         }
     }
 
-    private fun buildRow(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition,
-                         schemaWidth: Int): Flow {
+    /** 按钮条本体；位置由调用方定（内嵌=控件右上角，全屏=面板右下角）。 */
+    fun createRow(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition,
+                  fullscreen: Boolean): Flow {
         val row = Flow.row().name(ROW_NAME).coverChildren().childPadding(2)
-        // 只给像素制的 left/top：right(int) / rightRel(float) 都要先知道父级宽度，而父级是
-        // `coverChildren()`（宽度反过来由子件撑出），是循环依赖 —— MUI 会先按未解析值摆一次，父级可能被撑大；
-        // 而 JEI 那边整框尺寸取自控件的固定尺寸，取不到就退回 getMaxWidth/getMaxHeight = 200x180
-        // （MultiblockInfoJeiCategory.java:56-63 → ModularUIJeiCategory.getWidth(recipe)），父级一变大框就跟着变。
-        // 用构造参数里的 3D 控件宽度直接算绝对坐标，父级尺寸与这排按钮无关。
-        row.left(SCHEMA_X + schemaWidth - ROW_WIDTH - 2).top(2)
-
         if (fullscreen) {
             row.child(
                 iconButton(GuiTextures.CLOSE, MultiblockPreviewLang.BUTTON_EXIT) { closeFullscreen(preview) }
