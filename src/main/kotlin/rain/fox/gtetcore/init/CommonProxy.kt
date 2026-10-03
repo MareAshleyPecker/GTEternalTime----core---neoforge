@@ -15,6 +15,7 @@ import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
 import rain.fox.gtetcore.common.machine.multiblock.timeflow.MasterTowerRegistry
 import rain.fox.gtetcore.config.GtetConfig
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
+import rain.fox.gtetcore.data.lang.Ae2Lang
 import rain.fox.gtetcore.data.lang.JadeLang
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import rain.fox.gtetcore.data.lang.MasterTowerLang
@@ -133,6 +134,8 @@ class CommonProxy {
         ThreadHatchLang.register()
         // 多方块测试机：机器名（中文）+ tooltip 两行
         TestMultiblockLang.register()
+        // AE2 集成：标签过滤配置器那一套面板文案（机器本体属后续切片）
+        Ae2Lang.register()
         // 机器 3D 输入输出配置页
         MachineIoConfigLang.register()
         // 多方块 3D 预览的全屏 / 退出 / 重置视角按钮
