@@ -1,4 +1,4 @@
-// 1.21.1	2026-10-03T20:23:22.5392913	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
+// 1.21.1	2026-10-03T20:28:54.1808418	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
 e99760dd20a671e466dcdb8019dba5d041672b02 assets/gtetscore/blockstates/master_tower.json
 1cbd74ee434d591e54b2844b76391a215a744816 assets/gtetscore/blockstates/overclock_hatch_1024x_saving_max.json
 25043136f3ddc60bd363deeffe3bbf7c7a7bc420 assets/gtetscore/blockstates/overclock_hatch_16x_lossy2.json
@@ -25,8 +25,8 @@ f39fd722c4d67400b6489880c6741d692f554547 assets/gtetscore/blockstates/tf_hatch_1
 7e1c0512b4b85f1f87b58a784c091d2d39b3a8a7 assets/gtetscore/blockstates/tf_hatch_256h.json
 01776d75f7f5a39585df8c0522b1715f23afd5fc assets/gtetscore/blockstates/tf_hatch_4096h.json
 f120d9d237d0bfc2b3f4ed5313187445a600aa90 assets/gtetscore/blockstates/tf_hatch_64h.json
-278f4001acb3cfa0346dba60b9003fcd111b6187 assets/gtetscore/lang/en_ud.json
-520581ddd7b2dc134fcc20db5185d7874c570860 assets/gtetscore/lang/en_us.json
+83b55d601e37b214454fe7bbf4e52d6b6e2406e1 assets/gtetscore/lang/en_ud.json
+49f960b2dead93349a32068019fb05743699c9c9 assets/gtetscore/lang/en_us.json
 743b128c72f5c164f04b348b059ab6f10f81a53c assets/gtetscore/models/block/machine/master_tower.json
 5fe25e63d035bf18d8a97c6ce9b3a585b0f02a36 assets/gtetscore/models/block/machine/overclock_hatch_1024x_saving_max.json
 095f88489192552bb1ab38094c05d7a85f750db2 assets/gtetscore/models/block/machine/overclock_hatch_16x_lossy2.json

@@ -48,21 +48,31 @@ private const val CELL_GAP = 2
 private const val TOGGLE_SIZE = 18
 
 /**
- * 六个面在展开图里的落位（面, 列, 行）。
+ * 六个面槽在六面图里的落位（槽, 列, 行）；左上角 (0,0) 刻意留空。
  *
- * ⚠️ 显式写 `Direction` 常量，**绝不**拿列表下标当协议：`Direction` 的 ordinal 顺序是
+ * ```
+ *   [空]  [顶]
+ *   [左]  [正]  [右]
+ *   [后]  [底]
+ * ```
+ *
+ * ⚠️ 显式写槽位常量，**绝不**拿列表下标当协议：`Direction` 的 ordinal 顺序是
  * DOWN, UP, NORTH, SOUTH, WEST, EAST，跟这里的显示顺序毫无关系。
  */
-private val FACE_LAYOUT: List<Triple<Direction, Int, Int>> = listOf(
-    Triple(Direction.UP, 1, 0),
-    Triple(Direction.WEST, 0, 1),
-    Triple(Direction.NORTH, 1, 1),
-    Triple(Direction.EAST, 2, 1),
-    Triple(Direction.SOUTH, 3, 1),
-    Triple(Direction.DOWN, 1, 2)
+private val FACE_LAYOUT: List<Triple<FaceSlot, Int, Int>> = listOf(
+    Triple(FaceSlot.TOP, 1, 0),
+    Triple(FaceSlot.LEFT, 0, 1),
+    Triple(FaceSlot.FRONT, 1, 1),
+    Triple(FaceSlot.RIGHT, 2, 1),
+    Triple(FaceSlot.BACK, 0, 2),
+    Triple(FaceSlot.BOTTOM, 1, 2)
 )
 
-private const val GRID_WIDTH = 4 * FACE_CELL_SIZE + 3 * CELL_GAP
+private val FACE_SLOT_ORDER: List<FaceSlot> = listOf(
+    FaceSlot.FRONT, FaceSlot.BACK, FaceSlot.TOP, FaceSlot.BOTTOM, FaceSlot.LEFT, FaceSlot.RIGHT
+)
+
+private const val GRID_WIDTH = 3 * FACE_CELL_SIZE + 2 * CELL_GAP
 private const val GRID_HEIGHT = 3 * FACE_CELL_SIZE + 2 * CELL_GAP
 
 private val BACKDROP_UNDERLAY: Int = Color.argb(255, 24, 26, 30)
@@ -197,22 +207,23 @@ class MachineIoConfigPage(
 
     private fun createFaceDiagram(): IWidget {
         val box = IoBox().name("io_config_faces").size(GRID_WIDTH, GRID_HEIGHT)
-        FACE_LAYOUT.forEach { (face, col, row) -> box.child(faceCell(face, col, row)) }
+        FACE_LAYOUT.forEach { (slot, col, row) -> box.child(faceCell(slot, col, row)) }
         return box
     }
 
-    private fun faceCell(face: Direction, col: Int, row: Int): IWidget =
-        IoButton()
+    private fun faceCell(slot: FaceSlot, col: Int, row: Int): IWidget {
+        val face = slotDirection(slot)
+        return IoButton()
             .size(FACE_CELL_SIZE)
             .pos(col * (FACE_CELL_SIZE + CELL_GAP), row * (FACE_CELL_SIZE + CELL_GAP))
             .background(DynamicDrawable(Supplier<IDrawable> { Rectangle().color(faceCellColor(face)).solid() }))
             .child(
-                IoLabel(Supplier { Text.lang(MachineIoConfigLang.shortFaceKey(face)) })
+                IoLabel(Supplier { Text.lang(slot.shortKey) })
                     .center().color(CELL_TEXT_COLOR)
             )
             .tooltipAutoUpdate(true)
             .tooltipBuilder { tip ->
-                tip.addLine(Text.lang(MachineIoConfigLang.faceKey(face)))
+                tip.addLine(Text.lang(slot.langKey))
                 if (isFrontFace(face)) tip.addLine(Text.lang(MachineIoConfigLang.FACE_CELL_FRONT))
                 tip.addLine(Text.lang(MachineIoConfigLang.FACE_CELL_TIP))
             }
@@ -223,6 +234,7 @@ class MachineIoConfigPage(
                 }
                 true
             }
+    }
 
     private fun faceCellColor(face: Direction): Int {
         val items = itemSupported && trait.itemOutputDirection == face
@@ -237,6 +249,39 @@ class MachineIoConfigPage(
 
     /** 正面不能设成输出面：`setItemOutputDirection` 会直接 return（AutoOutputTrait.java:221-222）。 */
     private fun isFrontFace(face: Direction): Boolean = machine.hasFrontFacing() && machine.frontFacing == face
+
+    /**
+     * 面槽 → 实际 `Direction`。
+     *
+     * **左 / 右约定：站在机器正前方、面向机器时，玩家的左手边 = 左面。**
+     * 水平朝向下即 `左 = front.getClockWise()`、`右 = front.getCounterClockWise()`
+     * （MC 的 clockWise 是俯视 +Y 顺时针：NORTH→EAST→SOUTH→WEST）。
+     * 万一用户说左右反了，只改这一处即可。
+     *
+     * 机器没有朝向（`hasFrontFacing() == false`）时，退回以 `Direction.NORTH` 当基准正面；
+     * 朝向本身是竖直方向（UP / DOWN）时，左 / 右退回固定的 EAST / WEST。
+     */
+    private fun slotDirection(slot: FaceSlot): Direction {
+        val front = if (machine.hasFrontFacing()) machine.frontFacing else Direction.NORTH
+        val horizontal = front.axis != Direction.Axis.Y
+        return when (slot) {
+            FaceSlot.FRONT -> front
+            FaceSlot.BACK -> front.opposite
+            FaceSlot.TOP -> Direction.UP
+            FaceSlot.BOTTOM -> Direction.DOWN
+            FaceSlot.LEFT -> if (horizontal) front.clockWise else Direction.EAST
+            FaceSlot.RIGHT -> if (horizontal) front.counterClockWise else Direction.WEST
+        }
+    }
+
+    /** 绝对方位 → 相对机器朝向的面名；正面先查，避免朝向竖直时正面与顶 / 底重合产生歧义。 */
+    private fun relativeName(direction: Direction?): Component {
+        if (direction == null) return Text.lang(MachineIoConfigLang.FACE_NONE)
+        for (slot in FACE_SLOT_ORDER) {
+            if (slotDirection(slot) == direction) return Text.lang(slot.langKey)
+        }
+        return Text.lang(MachineIoConfigLang.FACE_NONE)
+    }
 
     // ======================== 四个开关 ========================
 
@@ -342,9 +387,7 @@ class MachineIoConfigPage(
         return out
     }
 
-    private fun directionName(direction: Direction?): Component =
-        if (direction == null) Text.lang(MachineIoConfigLang.FACE_NONE)
-        else Text.lang(MachineIoConfigLang.faceKey(direction))
+    private fun directionName(direction: Direction?): Component = relativeName(direction)
 
     // ======================== 自引用泛型的控件壳 ========================
     // MUI 这几只控件是 `Foo<W extends Foo<W>>`，Kotlin 里没法用菱形推断，链条会退回父类型。
@@ -358,4 +401,14 @@ class MachineIoConfigPage(
         constructor(text: Component) : super(text)
         constructor(text: Supplier<Component>) : super(text)
     }
+}
+
+/** 六面图的面槽（相对机器朝向），自带面名与格内缩写两个语言键。 */
+private enum class FaceSlot(val langKey: String, val shortKey: String) {
+    FRONT(MachineIoConfigLang.REL_FRONT, MachineIoConfigLang.REL_FRONT_SHORT),
+    BACK(MachineIoConfigLang.REL_BACK, MachineIoConfigLang.REL_BACK_SHORT),
+    TOP(MachineIoConfigLang.REL_TOP, MachineIoConfigLang.REL_TOP_SHORT),
+    BOTTOM(MachineIoConfigLang.REL_BOTTOM, MachineIoConfigLang.REL_BOTTOM_SHORT),
+    LEFT(MachineIoConfigLang.REL_LEFT, MachineIoConfigLang.REL_LEFT_SHORT),
+    RIGHT(MachineIoConfigLang.REL_RIGHT, MachineIoConfigLang.REL_RIGHT_SHORT)
 }
