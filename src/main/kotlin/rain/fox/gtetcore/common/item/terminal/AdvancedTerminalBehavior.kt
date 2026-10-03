@@ -28,7 +28,7 @@ import net.minecraft.world.level.Level
 object AdvancedTerminalBehavior : IInteractionItem {
 
     /** 「潜行右键的不是多方块控制器」提示键（老代码这一支是 AE 绑定手势，不提示）。 */
-    const val MSG_NOT_CONTROLLER: String = "item.gtetcore.advanced_terminal.build.not_controller"
+    const val msg_not_controller: String = "item.gtetcore.advanced_terminal.build.not_controller"
 
     override fun useOn(context: UseOnContext): InteractionResult {
         val player = context.player ?: return InteractionResult.PASS
@@ -45,7 +45,7 @@ object AdvancedTerminalBehavior : IInteractionItem {
                 // TODO(AE 切片)：老代码在这里当「绑定无线接入点」的手势用（`AdvancedTerminalBind.toggle`），
                 //  AE 未移植 → 退化成给玩家一句明确反馈，免得「潜行右键没反应」被当成 bug
                 player.displayClientMessage(
-                    Component.translatable(MSG_NOT_CONTROLLER).withStyle(ChatFormatting.RED), true
+                    Component.translatable(msg_not_controller).withStyle(ChatFormatting.RED), true
                 )
             }
         }

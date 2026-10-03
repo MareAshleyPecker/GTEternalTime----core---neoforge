@@ -50,9 +50,9 @@ object Gtetcore {
         // 注意别在这里读 MachineEntry 的值（如 .tier）：mod 构造期注册表还没建好，
         // 读它会抛 `IllegalStateException: Registry not present for DeferredHolder{... gtceu:machine}`。
         @Suppress("UNUSED_EXPRESSION")
-        TestMachines.TEST_SYNC_PART
+        TestMachines.test_sync_part
         @Suppress("UNUSED_EXPRESSION")
-        ETMachines.PARALLEL_HATCH_IV
+        ETMachines.parallel_hatch_iv
         // 高级终端物品同理：registrate 只在 builder 被创建时登记，必须在这里取一次值
         @Suppress("UNUSED_EXPRESSION")
         ETItems.ADVANCED_TERMINAL

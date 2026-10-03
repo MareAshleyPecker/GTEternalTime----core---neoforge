@@ -12,7 +12,7 @@ import rain.fox.gtetcore.registry.machineBuilder
 object TestMachines {
 
     @JvmField
-    val TEST_SYNC_PART: MachineEntry<MachineDefinition> = ETRegistrate.REGISTRATE
+    val test_sync_part: MachineEntry<MachineDefinition> = ETRegistrate.REGISTRATE
         .machineBuilder("test_sync_part") { info -> TestSyncPartMachine(info, GTValues.LV) }
         .langValue("Test Sync Part")
         .tier(GTValues.LV)

@@ -48,15 +48,15 @@ object AdvancedTerminalBuilder {
      * 反而更容易出问题。改成「一次放完，超过上限就整体拒绝并提示」，
      * 上限内是一 tick 完成，超过就让玩家自己分几次搭（或改大这个常量）。
      */
-    const val MAX_BLOCKS_PER_BUILD: Int = 512
+    const val max_blocks_per_build: Int = 512
 
     /**
      * 「一次搭建太大」的提示键。
      *
-     * 老项目是 `AdvancedTerminalLang.BUILD_TOO_MANY`；那个语言对象要连界面一起移植，
+     * 老项目是 `AdvancedTerminalLang.build_too_many`；那个语言对象要连界面一起移植，
      * 这里先写死键名（值与原项目一致），等界面切片再把常量挪回去。
      */
-    private const val BUILD_TOO_MANY: String = "item.gtetcore.advanced_terminal.build.too_many"
+    private const val build_too_many: String = "item.gtetcore.advanced_terminal.build.too_many"
 
     private val FACINGS = arrayOf(
         Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
@@ -71,7 +71,7 @@ object AdvancedTerminalBuilder {
      * @param placed   放下的方块数
      * @param removed  拆掉的方块数
      * @param missing  没找到来源（背包里没有）的格子数
-     * @param rejected 因为超过 [MAX_BLOCKS_PER_BUILD] 而整体没执行
+     * @param rejected 因为超过 [max_blocks_per_build] 而整体没执行
      */
     data class Result(
         @get:JvmName("placed") val placed: Int,
@@ -246,9 +246,9 @@ object AdvancedTerminalBuilder {
             wanted.add(want)
         }
 
-        if (targets.size > MAX_BLOCKS_PER_BUILD) {
-            player.displayClientMessage(Component.translatable(BUILD_TOO_MANY,
-                targets.size, MAX_BLOCKS_PER_BUILD), true)
+        if (targets.size > max_blocks_per_build) {
+            player.displayClientMessage(Component.translatable(build_too_many,
+                targets.size, max_blocks_per_build), true)
             return Result(0, 0, 0, true)
         }
         if (targets.isEmpty()) return Result.NONE
@@ -424,9 +424,9 @@ object AdvancedTerminalBuilder {
             targets.add(cell.pos)
         }
 
-        if (targets.size > MAX_BLOCKS_PER_BUILD) {
-            player.displayClientMessage(Component.translatable(BUILD_TOO_MANY,
-                targets.size, MAX_BLOCKS_PER_BUILD), true)
+        if (targets.size > max_blocks_per_build) {
+            player.displayClientMessage(Component.translatable(build_too_many,
+                targets.size, max_blocks_per_build), true)
             return Result(0, 0, 0, true)
         }
 

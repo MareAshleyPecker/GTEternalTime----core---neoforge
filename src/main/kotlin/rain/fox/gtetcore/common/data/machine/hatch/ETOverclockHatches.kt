@@ -52,15 +52,15 @@ object ETOverclockHatches {
     private const val GTOCORE_NS = "gtocore"
 
     /** GTOCore 超频仓覆盖层目录前缀（完整路径 = 本前缀 + mk 编号）。 */
-    private const val OVERCLOCK_OVERLAY_ROOT = "block/machines/overclock_hatch/overclock_hatch_mk"
+    private const val overclock_overlay_root = "block/machines/overclock_hatch/overclock_hatch_mk"
 
     /** GTOCore 的 mk 编号区间：`mk1` ↔ UV，`mk7` ↔ MAX；本族多出的 ZPM 档收进 mk1。 */
-    private const val OVERCLOCK_MK_MIN = 1
-    private const val OVERCLOCK_MK_MAX = 7
+    private const val overclock_mk_min = 1
+    private const val overclock_mk_max = 7
 
     private fun overlayFor(v: OverclockHatchVariant): ResourceLocation = ResourceLocation.fromNamespaceAndPath(
         GTOCORE_NS,
-        OVERCLOCK_OVERLAY_ROOT + (v.tier - GTValues.ZPM).coerceIn(OVERCLOCK_MK_MIN, OVERCLOCK_MK_MAX)
+        overclock_overlay_root + (v.tier - GTValues.ZPM).coerceIn(overclock_mk_min, overclock_mk_max)
     )
 
     /** 全部超频仓变体。 */

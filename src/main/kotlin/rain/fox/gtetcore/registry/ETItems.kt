@@ -17,7 +17,7 @@ import rain.fox.gtetcore.util.lang.LangUtil
 object ETItems {
 
     /** 「一次搭建的方块数超限」提示键；值必须与 `AdvancedTerminalBuilder` 里引用的字面量一致。 */
-    private const val BUILD_TOO_MANY: String = "item.gtetcore.advanced_terminal.build.too_many"
+    private const val build_too_many: String = "item.gtetcore.advanced_terminal.build.too_many"
 
     init {
         // 双语条目：英文进 registrate 的 en_us，中文由 ZhCnLangProvider 写 zh_cn（各写各的文件）。
@@ -25,13 +25,13 @@ object ETItems {
         //    再用 LangUtil.add 写一遍会因为「重复的翻译键」让数据生成直接失败。
 
         LangUtil.add(
-            BUILD_TOO_MANY,
+            build_too_many,
             "Structure is too large for one build: %s blocks (limit %s)",
             "结构过大，一次搭建的方块上限：%s 格（上限 %s）"
         )
         // 老代码「潜行右键非控制器方块」走的是 AE 绑定手势、什么都不提示；AE 切片未做，这里改成明确反馈
         LangUtil.add(
-            AdvancedTerminalBehavior.MSG_NOT_CONTROLLER,
+            AdvancedTerminalBehavior.msg_not_controller,
             "This block is not a multiblock controller",
             "该方块不是多方块控制器"
         )

@@ -27,7 +27,7 @@ object ETMachines {
 
     /** IV 并行仓（32 并行）。贴图沿用 GTM 的并行仓 mk4，与老项目一样是临时占位。 */
     @JvmField
-    val PARALLEL_HATCH_IV: MachineEntry<MachineDefinition> = run {
+    val parallel_hatch_iv: MachineEntry<MachineDefinition> = run {
         LangUtil.BLOCK_LANG["parallel_hatch_iv"] = "${GTValues.VN[GTValues.IV]} 并行仓（32 并行）"
 
         ETRegistrate.REGISTRATE
@@ -58,7 +58,7 @@ object ETMachines {
 
     /** 并行仓全族：目前只登记了 IV 一档，等完整变体表移植过来再补全。 */
     @JvmField
-    val PARALLEL_HATCHES: List<MachineEntry<MachineDefinition>> = listOf(PARALLEL_HATCH_IV)
+    val PARALLEL_HATCHES: List<MachineEntry<MachineDefinition>> = listOf(parallel_hatch_iv)
 
     /** 线程仓：变体表还没移植，先给空占位（静态组表拿不齐就不缓存，会自动重算）。 */
     @JvmField
