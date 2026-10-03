@@ -9,6 +9,8 @@
   ],
   "client": [
     "modularui.debug.IThemeEncoderMixin",
+    "modularui.debug.SchemaWidgetGeometryDebugMixin",
+    "modularui.debug.SchemaGlViewportDebugMixin",
     "gtm.MultiblockPreviewWidgetMixin"
   ],
   "injectors": {

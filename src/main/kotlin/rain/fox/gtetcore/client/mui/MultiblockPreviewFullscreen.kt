@@ -146,9 +146,9 @@ private const val OWNER = "gtetscore"
 private const val PANEL_NAME = "gtetscore_multiblock_preview_fullscreen"
 
 /** 让出四周的空间，预览控件自己的滑条列 / 部件列还要占几十像素。 */
-private const val PREVIEW_MARGIN_X = 150
-private const val PREVIEW_MARGIN_Y = 110
+private const val PREVIEW_MARGIN_X = 70
+private const val PREVIEW_MARGIN_Y = 70
 private const val MIN_PREVIEW_SIZE = 120
 
-/** 灰色半透明底（ARGB）：压暗底下的 JEI 信息页但还看得见。 */
-private val BACKDROP_COLOR: Int = Color.withAlpha(Color.rgb(128, 128, 128), 0.6f)
+/** 灰色半透明底（ARGB）：0.85 让底下的 JEI / EMI 只剩隐约轮廓，才像"铺满的一层"。 */
+private val BACKDROP_COLOR: Int = Color.withAlpha(Color.rgb(128, 128, 128), 0.85f)
