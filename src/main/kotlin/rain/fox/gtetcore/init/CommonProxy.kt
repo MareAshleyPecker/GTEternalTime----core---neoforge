@@ -17,6 +17,7 @@ import rain.fox.gtetcore.config.GtetConfig
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import rain.fox.gtetcore.data.lang.MasterTowerLang
+import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.data.lang.TimeFlowHatchLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
@@ -123,6 +124,8 @@ class CommonProxy {
         MasterTowerLang.register()
         // 机器 3D 输入输出配置页
         MachineIoConfigLang.register()
+        // 多方块 3D 预览的全屏 / 退出 / 重置视角按钮
+        MultiblockPreviewLang.register()
     }
 
     /**
