@@ -12,6 +12,7 @@ import com.gregtechceu.gtceu.api.registry.registrate.entry.MachineEntry
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels.createWorkableTieredHullMachineModel
 import rain.fox.gtetcore.common.data.machine.hatch.ETOverclockHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETTimeFlowHatches
+import rain.fox.gtetcore.common.data.machine.hatch.ETWirelessEnergyHatches
 import rain.fox.gtetcore.common.data.machine.multiblock.ETMasterTower
 import rain.fox.gtetcore.common.machine.multiblock.part.ETParallelHatchPartMachine
 import rain.fox.gtetcore.util.ETPartSharing
@@ -20,8 +21,9 @@ import rain.fox.gtetcore.util.lang.LangUtil
 /**
  * GTET 机器注册入口。
  *
- * 目前登记四类：**并行仓**（IV 一档，验证注册 / 存档 / MUI 面板 / C2S 同步四条链路）、
+ * 目前登记五类：**并行仓**（IV 一档，验证注册 / 存档 / MUI 面板 / C2S 同步四条链路）、
  * **超频仓**（17 档，见 [ETOverclockHatches]）、**时序仓**（6 档，见 [ETTimeFlowHatches]）、
+ * **无线能源仓**（110 档，见 [ETWirelessEnergyHatches]）、
  * **主控塔**（本工程第一台多方块控制器，见 [ETMasterTower]）。
  * 老项目的完整并行仓变体表（IV 32 / LuV 128 / ZPM 512 / UV 2048 / UHV 8192 / UEV 32768 /
  * UIV 524288 / UXV 2097152 / OpV 8388608 / MAX 33554432）等支撑类补齐后再上。
@@ -100,6 +102,17 @@ object ETMachines {
     @JvmField
     val TIME_FLOW_HATCHES: List<MachineEntry<MachineDefinition>> =
         ETTimeFlowHatches.register(ETRegistrate.REGISTRATE)
+
+    /**
+     * 无线能源仓全族 110 档：电压 IV ~ MAX（10 档）× 安培 1A ~ 4194304A（11 档）。
+     *
+     * ⚠️ 复用 GTM 的 `PartAbility.INPUT_ENERGY`（本族不新建能力）。GTM 多方块的结构图案是懒记忆化的
+     * （`MultiblockMachineDefinition.java:58`），到首次结构检测时才取 `getAllBlocks()`，
+     * 所以本行只要排在**我们自己的**多方块之前就够（与 [TIME_FLOW_HATCHES] 同一条顺序约定）。
+     */
+    @JvmField
+    val WIRELESS_ENERGY_HATCHES: List<MachineEntry<MachineDefinition>> =
+        ETWirelessEnergyHatches.register(ETRegistrate.REGISTRATE)
 
     /**
      * **主控塔**（本工程第一台多方块控制器）。
