@@ -5,10 +5,13 @@ import com.gregtechceu.gtceu.api.machine.MachineInstanceFactory
 import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.registry.registrate.GTRegistrate
 import com.gregtechceu.gtceu.api.registry.registrate.builder.MachineBuilder
+import com.tterrag.registrate.builders.ItemBuilder
 import com.tterrag.registrate.providers.ProviderType
 import com.tterrag.registrate.util.entry.RegistryEntry
 import net.minecraft.core.registries.Registries
+import net.minecraft.resources.ResourceKey
 import net.minecraft.world.item.CreativeModeTab
+import net.minecraft.world.item.CreativeModeTabs
 import net.minecraft.world.item.Item
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.util.lang.LangUtil
@@ -91,4 +94,46 @@ fun GTRegistrate.assignTab(
             getOptional<Item, Item>(entry.id.path, Registries.ITEM).orElse(null)
         if (itemEntry != null) setCreativeTab(itemEntry, tab)
     }
+}
+
+/**
+ * 关掉 Registrate 的「影子归页」——**每件物品注册时都必须调一次**（见 [inTab] 里的用法）。
+ *
+ * `AbstractRegistrate.item(...)` 在建 builder 时会顺手 `.tab(defaultCreativeModeTab)`，
+ * 而这个字段的初值是**原版搜索页** `CreativeModeTabs.SEARCH`（写在 `AbstractRegistrate.<init>` 里），
+ * 于是每件物品都额外挂着一条「把自己塞进搜索页」的 modifier。
+ *
+ * 搜索页的内容是从**其它页聚合**出来的（`CreativeModeTabs.SEARCH` 的展示生成器遍历各页取
+ * `getDisplayItems()`）：第一次构建时别的页还没建、聚合为空，看不出问题；但开一次背包就会走
+ * `CreativeModeTab.tryRebuildTabContents` 重建，此时聚合结果里**已经有**这件物品，
+ * 那条 modifier 再塞一次就撞上 NeoForge 的断言（21.1.252 `BuildCreativeModeTabContentsEvent.accept`
+ * → `assertNewEntryDoesNotAlreadyExists`）：
+ * `IllegalArgumentException: Itemstack 1 gtetscore:advanced_terminal already exists in the tab's list`，
+ * 崩在 `ModLoadingException` 上，看起来像内存不足，其实是这个。
+ *
+ * GTET 的归页统一走 GTRegistrate 的 `TAB_LOOKUP`（见 [inTab] / [assignTab]），不需要影子归页。
+ * 必须在 **`.register()` 之前**清 —— modifier 是在 register 时按这份页映射注册到 registrate 上的，
+ * 注册完再清就晚了。清掉后物品照样搜得到（搜索页靠聚合，不靠这条 modifier）。
+ */
+fun <T : Item, P> ItemBuilder<T, P>.noDefaultTab(): ItemBuilder<T, P> {
+    removeTab(CreativeModeTabs.SEARCH)
+    ETCreativeModeTabs.all().mapNotNull { it.key }.forEach { removeTab(it) }
+    return this
+}
+
+/**
+ * 关掉 Registrate 的「影子归页」总闸 —— **每建完一个创造页都必须调一次**（见 [ETCreativeModeTabs.registerTab]）。
+ *
+ * [noDefaultTab] 只能救单件物品，救不了机器：机器的物品是 `MachineBuilder` 内部经
+ * `AbstractRegistrate.item(parent, name, factory)` 建的（`MachineBuilder.java:228`），
+ * 我们拿不到那个 `ItemBuilder`。所以要从根上把 `defaultCreativeModeTab` 置空 ——
+ * `AbstractRegistrate.item(...)` 建 builder 时看到它是 null 就**不会**再挂归页 modifier。
+ *
+ * ⚠️ 必须在**建完页之后**清：`defaultCreativeTab(name) { ... }` 内部会先把字段设成新页的 key、
+ * 再拿它生成 `itemGroup.<id>.<name>` 的语言键，清早了会 NPE。
+ */
+fun GTRegistrate.clearDefaultTab() {
+    // 参数在 Java 侧是平台类型，允许传 null；传 null 就是「没有默认页」
+    @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+    defaultCreativeTab(null as ResourceKey<CreativeModeTab>?)
 }

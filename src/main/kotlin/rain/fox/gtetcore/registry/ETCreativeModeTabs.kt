@@ -36,6 +36,9 @@ import java.util.function.Supplier
  */
 object ETCreativeModeTabs {
 
+    private fun Re(){
+        
+    }
     /**
      * 通用建页帮助函数：登记一个分类页并返回条目。
      *
@@ -60,7 +63,7 @@ object ETCreativeModeTabs {
         titleCn: String = titleDefault,
     ): RegistryEntry<CreativeModeTab, CreativeModeTab> {
         LangUtil.TAB_LANG[name] = titleCn
-        return registrate
+        val entry = registrate
             .defaultCreativeTab(name) { builder ->
                 builder
                     .displayItems(GTCreativeModeTabs.RegistrateDisplayItemsGenerator(name, registrate))
@@ -69,6 +72,13 @@ object ETCreativeModeTabs {
                     .build()
             }
             .register()
+
+        // 建完立刻把 Registrate 的「默认页」清掉。不清的话，之后注册的**每一件物品**（含机器）都会被它
+        // 自动挂一条归页 modifier，开一次背包重建创造页时就与展示生成器重复 → ModLoadingException 崩游戏
+        // （NeoForge `BuildCreativeModeTabContentsEvent.assertNewEntryDoesNotAlreadyExists`）。
+        // 详见 ETRegistrate.clearDefaultTab / noDefaultTab 的注释。
+        registrate.clearDefaultTab()
+        return entry
     }
 
     /** GTET 机器页：并行仓、超频仓（线程仓待变体表移植后自动进来）。 */
@@ -160,4 +170,8 @@ object ETCreativeModeTabs {
      * （`ETMachines` 引 `MACHINE`、`ETItems` 引 `ITEM`），整个 object 就会被初始化、七个页一起登记。
      */
     fun init() {}
+
+    /** 七个页的清单：给「清影子归页」用（见 `ETRegistrate.noDefaultTab`）。 */
+    fun all(): List<RegistryEntry<CreativeModeTab, CreativeModeTab>> =
+        listOf(MACHINE, ITEM, BLOCK, MULTIBLOCK, FLUID, ORE, GTOBLOCK)
 }

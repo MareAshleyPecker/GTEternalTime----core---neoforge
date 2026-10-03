@@ -85,6 +85,8 @@ object ETItems {
         ETRegistrate.REGISTRATE.inTab(ETCreativeModeTabs.ITEM) {
             ETRegistrate.REGISTRATE
                 .item("advanced_terminal", ::ComponentItem)
+                // Registrate 的「影子归页」会把这件物品再塞进原版搜索页，重建时与聚合结果重复 → 崩游戏
+                .noDefaultTab()
                 .lang("§bAdvanced Terminal")
                 .properties { properties -> properties.stacksTo(1) }
                 // 贴图自备：assets/gtetscore/textures/item/advanced_terminal.png
@@ -127,6 +129,8 @@ object ETItems {
             ETRegistrate.REGISTRATE
                 // ⚠️ 物品 id 按老工程定稿为 clock_of_time_sequence，别改（老工程刚从 time_clock 全量改名过来）
                 .item("clock_of_time_sequence", ::ComponentItem)
+                // 同上：清掉 Registrate 的影子归页，免得开背包重建创造页时重复入页崩游戏
+                .noDefaultTab()
                 .lang("§bTime clock")
                 .properties { properties -> properties.stacksTo(1) }
                 .model { ctx, provider ->

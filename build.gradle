@@ -121,6 +121,11 @@ neoForge {
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             logLevel = org.slf4j.event.Level.DEBUG
+
+            // 堆上限：MDG 给的默认堆偏小（本机实测崩前是 -Xmx4G），GTM 这种大模组进去就吃满。
+            // 本机物理内存 15.8G、提交内存已经接近上限，若游戏 JVM 起不来就把握把 6G 降回 4G。
+            jvmArgument '-Xms2G'
+            jvmArgument '-Xmx6G'
         }
     }
 

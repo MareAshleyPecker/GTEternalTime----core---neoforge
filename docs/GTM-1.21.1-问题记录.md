@@ -233,6 +233,43 @@ MOD_BUS.addListener(::onGatherData)                                 // mod 总�
 
 ---
 
+## 11. 开一次背包就崩：创造页重建时同一件物品被放两次（严重度：高 · 状态：已修；根因在 Registrate 的「默认页」）
+
+**一句话**：`AbstractRegistrate.defaultCreativeModeTab` 字段初值是**原版搜索页**，每件物品（含机器的物品）注册时都会被它自动挂一条「把自己塞进搜索页」的 modifier；按 E 开背包会触发创造页重建，此时搜索页聚合结果里已经有这件物品 → NeoForge 断言失败、整个 mod 加载失败。
+
+**来源**：
+
+```
+net.neoforged.fml.ModLoadingException: Loading errors encountered:
+	- GTEternalTime-Space -- core -- neoforge (gtetscore) encountered an error while dispatching the net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent event
+	  java.lang.IllegalArgumentException: Itemstack 1 gtetscore:advanced_terminal already exists in the tab's list
+	at net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent.assertNewEntryDoesNotAlreadyExists(BuildCreativeModeTabContentsEvent.java:196)
+	at net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent.accept(BuildCreativeModeTabContentsEvent.java:94)
+	at com.tterrag.registrate.util.CreativeModeTabModifier.accept(CreativeModeTabModifier.java:42)
+	at com.tterrag.registrate.builders.ItemBuilder.lambda$tab$4(ItemBuilder.java:184)
+	at com.tterrag.registrate.AbstractRegistrate.lambda$onBuildCreativeModeTabContents$2(AbstractRegistrate.java:309)
+	at com.gregtechceu.gtceu.api.registry.registrate.GTRegistrate.lambda$registerEventListeners$3(GTRegistrate.java:153)
+```
+
+外层是 `ModLoadingException`，看着像内存不足 / OOM，其实与内存无关（崩溃报告里 `Memory: 1186 MiB / 2520 MiB up to 4056 MiB`，堆还剩一大半）。
+
+**触发**：进世界后**按 E 打开创造模式背包**（`CreativeModeTab.tryRebuildTabContents`）。首次构建不炸、重建才炸 —— 搜索页的内容是从**其它页聚合**来的（`CreativeModeTabs.java:1225-1235` 遍历各页取 `getSearchTabDisplayItems()`），第一次构建时别的页还没建、聚合为空，所以看不出问题。
+
+**成因**：
+
+1. `AbstractRegistrate.<init>` 把 `defaultCreativeModeTab` 初始化成 `CreativeModeTabs.SEARCH`；
+2. `AbstractRegistrate.item(...)` 建 builder 时若该字段非 null 就自动 `.tab(字段)`（`AbstractRegistrate.lambda$item$13`）；机器的物品也走这条路（`MachineBuilder.java:228` → `getOwner().item(parent, name, factory)`），所以**光给物品自己调 `removeTab` 救不了机器**；
+3. GTET 的归页走的是 GTM 那套 `TAB_LOOKUP` + `RegistrateDisplayItemsGenerator`，与这条「影子归页」指向同一个页 → 同一件物品被 `accept` 两次 → `assertNewEntryDoesNotAlreadyExists` 抛异常。
+   （GTM 本体有同样的影子归页，但它的页不是 SEARCH、也不与影子归页重合，所以撞不上；GTET 的页是新登记的才暴露。）
+
+**处理**：
+
+- 总闸：`ETRegistrate.clearDefaultTab()`（等价 `defaultCreativeTab(null)`）——**每建完一个创造页就清一次**，之后注册的物品（含机器）都不会再挂影子归页。
+- 兜底：`ItemBuilder.noDefaultTab()`——单件物品把 `SEARCH` 与 GTET 七个页从 builder 的页映射里移除，必须在 `.register()` **之前**调（modifier 是 register 时按这份映射注册的）。
+- 验证：`javap -c` 确认 `clearDefaultTab` 发的是 `aconst_null → GTRegistrate.defaultCreativeTab(ResourceKey)`；`gradlew classes` 通过。
+
+---
+
 ## 模板（新增条目时复制）
 
 ```markdown
