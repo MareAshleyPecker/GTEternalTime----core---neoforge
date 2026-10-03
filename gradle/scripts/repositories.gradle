@@ -1,0 +1,48 @@
+// 依赖仓库声明
+repositories {
+    mavenLocal()
+
+    // ───────── 国内镜像（放前面，命中快）─────────
+    maven { name = 'Aliyun-Public'; url = 'https://maven.aliyun.com/repository/public' }
+    maven { name = 'Huawei-Cloud';  url = 'https://repo.huaweicloud.com/repository/maven/' }
+    maven { name = 'Tencent-Cloud'; url = 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' }
+
+    mavenCentral()
+
+    // ───────── NeoForge ─────────
+    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+
+    // ───────── GTCEu（GregTech Modern 1.21.1）─────────
+    maven { name = 'GTCEu'; url = 'https://maven.gtceu.com' }
+
+    // ───────── LDLib / LDLib2（LowDragMC）─────────
+    maven { name = 'FirstDarkDev'; url = 'https://maven.firstdark.dev/snapshots' }
+
+    // ───────── Kotlin for Forge ─────────
+    maven {
+        name = 'Kotlin for Forge'
+        url = 'https://thedarkcolour.github.io/KotlinForForge/'
+        content { includeGroup 'thedarkcolour' }
+    }
+
+    // ───────── Modrinth Maven（jade 等）─────────
+    exclusiveContent {
+        forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven/' } }
+        filter { includeGroup 'maven.modrinth' }
+    }
+
+    // ───────── CurseForge Maven（ldlib2 / ae2 等）─────────
+    exclusiveContent {
+        forRepository { maven { name = 'CurseForge'; url = 'https://cursemaven.com/' } }
+        filter { includeGroup 'curse.maven' }
+    }
+
+    // ───────── AE2 / JEI 所在 ─────────
+    maven { name = 'ModMaven'; url = 'https://modmaven.dev/' }
+
+    // ───────── JEI 官方 maven（modmaven.dev 只是镜像，官方优先）─────────
+    maven { name = 'BlameJared'; url = 'https://maven.blamejared.com/' }
+
+    // ───────── EMI ─────────
+    maven { name = 'TerraformersMC'; url = 'https://maven.terraformersmc.com/releases/' }
+}
