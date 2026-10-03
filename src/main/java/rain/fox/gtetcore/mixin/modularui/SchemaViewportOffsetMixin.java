@@ -5,7 +5,11 @@ import brachy.modularui.screen.viewport.GuiContext;
 import brachy.modularui.theme.WidgetTheme;
 import brachy.modularui.widget.sizer.Area;
 
+import com.mojang.blaze3d.platform.Window;
+import net.minecraft.client.Minecraft;
 import org.joml.Matrix4f;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,10 +18,11 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import rain.fox.gtetcore.client.mui.PreviewDiag;
 
+import java.nio.IntBuffer;
 import java.util.Locale;
 
 /**
- * 把 3D 的 **GL 视口原点**从「MUI 局部坐标」补成「真实屏幕坐标」。
+ * 把 3D 的 **GL 视口原点**从「MUI 局部坐标」补成「真实屏幕坐标」，并接管这段时间的裁剪。
  *
  * <p>`BaseSchemaRenderer.draw` 偏移 32-46 算的是 `context.transformX(x, y) + screenArea.x()`；
  * 但 `GuiViewportStack.translate` 只改 MUI 自己的 `TransformationMatrix`（javap：只 `Matrix4f.translate` + `markDirty`），
@@ -40,6 +45,18 @@ public class SchemaViewportOffsetMixin {
 
     @Unique
     private boolean gtetcore$offsetLogged;
+
+    @Unique
+    private static final IntBuffer gtetcore$scissorBox = BufferUtils.createIntBuffer(16);
+
+    @Unique
+    private boolean gtetcore$clipTakenOver;
+
+    @Unique
+    private boolean gtetcore$hadScissorTest;
+
+    @Unique
+    private boolean gtetcore$hadStencilTest;
 
     @Inject(method = "draw", at = @At("HEAD"), remap = false, require = 0)
     private void gtetcore$measureViewportDelta(GuiContext context, int x, int y, int width, int height,
@@ -89,5 +106,60 @@ public class SchemaViewportOffsetMixin {
     @ModifyVariable(method = "draw", at = @At("HEAD"), argsOnly = true, index = 3, remap = false, require = 0)
     private int gtetcore$offsetViewportY(int y) {
         return y + this.gtetcore$viewportDeltaY;
+    }
+
+    /**
+     * 裁剪也一起接管：把 GL scissor 设成**校正后**的那个矩形，并暂时关掉 MUI 的 stencil 测试。
+     *
+     * <p>理由：`Viewport.applyViewport` 只设 `RenderSystem.viewport`（javap），3D 的裁剪实际由 MUI 的 widget stencil 管；
+     * 那层 mask 是 MUI 局部坐标系的产物 ⇒ 视口搬到框内后可能被旧位置的 mask 裁掉。这里显式用「视口矩形 ∩ scissor」把 3D 框住，
+     * 结果不依赖 MUI 的 mask 对不对；`draw` 结束时原样还原。
+     *
+     * <p>只在缺失量 ≠ 0（= 被配方查看器平移的场景）时动 GL 状态；普通 MUI 屏幕与自建全屏 overlay 完全不碰。
+     */
+    @Inject(method = "draw", at = @At("HEAD"), remap = false, require = 0)
+    private void gtetcore$takeOverClip(GuiContext context, int x, int y, int width, int height, WidgetTheme theme,
+                                       CallbackInfo ci) {
+        this.gtetcore$clipTakenOver = false;
+        if (this.gtetcore$viewportDeltaX == 0 && this.gtetcore$viewportDeltaY == 0) return;
+        try {
+            Window window = Minecraft.getInstance().getWindow();
+            double scale = window.getGuiScale();
+            int vx = context.transformX(x, y) + context.getScreenArea().x() + this.gtetcore$viewportDeltaX;
+            int vy = context.transformY(x, y) + context.getScreenArea().y() + this.gtetcore$viewportDeltaY;
+            this.gtetcore$hadScissorTest = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+            this.gtetcore$hadStencilTest = GL11.glIsEnabled(GL11.GL_STENCIL_TEST);
+            gtetcore$scissorBox.clear();
+            GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, gtetcore$scissorBox);
+
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);
+            // 与 Viewport.calculateOpenGLViewportFromRectangle 同一套换算（× GUI scale、y 自帧缓冲底部翻）
+            GL11.glScissor((int) Math.ceil(vx * scale),
+                    window.getHeight() - (int) Math.ceil((vy + height) * scale),
+                    (int) Math.ceil(width * scale), (int) Math.ceil(height * scale));
+            GL11.glDisable(GL11.GL_STENCIL_TEST);
+            this.gtetcore$clipTakenOver = true;
+        } catch (Throwable ignored) {
+            this.gtetcore$clipTakenOver = false;
+        }
+    }
+
+    @Inject(method = "draw", at = @At("RETURN"), remap = false, require = 0)
+    private void gtetcore$restoreClip(GuiContext context, int x, int y, int width, int height, WidgetTheme theme,
+                                      CallbackInfo ci) {
+        if (!this.gtetcore$clipTakenOver) return;
+        this.gtetcore$clipTakenOver = false;
+        try {
+            if (this.gtetcore$hadStencilTest) GL11.glEnable(GL11.GL_STENCIL_TEST);
+            else GL11.glDisable(GL11.GL_STENCIL_TEST);
+            if (this.gtetcore$hadScissorTest) {
+                GL11.glScissor(gtetcore$scissorBox.get(0), gtetcore$scissorBox.get(1),
+                        gtetcore$scissorBox.get(2), gtetcore$scissorBox.get(3));
+            } else {
+                GL11.glDisable(GL11.GL_SCISSOR_TEST);
+            }
+        } catch (Throwable ignored) {
+            // 还原失败也不能把异常抛回渲染链
+        }
     }
 }
