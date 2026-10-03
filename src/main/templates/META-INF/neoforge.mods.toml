@@ -85,3 +85,19 @@ side = "BOTH"
 # stop your mod loading on the server for example.
 #[features."${mod_id}"]
 #openGLVersion="[3.2,)"
+
+# 配方查看器：两个都**可选**（没装 GTET 照样跑，只是少了配方页与 JEI/EMI 集成），
+# 且都是纯客户端的东西。版本下限与 GTM 8.0.0 的 gradle/forge.versions.toml 对齐。
+[[dependencies."${mod_id}"]]
+modId = "jei"
+type = "optional"
+versionRange = "[${jei_version},)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies."${mod_id}"]]
+modId = "emi"
+type = "optional"
+versionRange = "[${emi_version},)"
+ordering = "AFTER"
+side = "CLIENT"
