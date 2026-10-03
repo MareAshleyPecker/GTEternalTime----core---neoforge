@@ -237,6 +237,15 @@ MOD_BUS.addListener(::onGatherData)                                 // mod 总�
 | 处理器可以不是 `MachineTrait`（自己拼 `RecipeHandlerList`） | `MultiblockPartMachine#getHandlerList()` 只从 `getTraitsByInterface(IRecipeHandlerTrait.class)` 收；且 `@SaveField` 只对 `ISyncManaged` 生效 ⇒ 处理器必须继承 `NotifiableRecipeHandlerTrait`，否则既不进多方块、也存不了档 |
 | `Content` 的字段式访问（`content.chance`） | 8.0.0 的 `Content` 是 record，组件访问器无 `get` 前缀；Kotlin 侧仍按属性写（`content.chance` / `content.content`）即可 |
 | 只实现 `IMuiMachine` 的部件覆写 `onLoad()` 写 `super.onLoad()` | 接口链上有 NeoForge `IBlockEntityExtension#onLoad()` default ⇒ Kotlin 报 `Multiple supertypes available`，要写 `super<TieredPartMachine>.onLoad()` |
+| `IMultiController` / `IMultiPart` / `IDisplayUIMachine#addMultiText` | 全删。部件不能再往控制器面板追加文本（自己开 MUI 面板）；要控制器身份就 `this as? MultiblockControllerMachine`（`parts` 在 `MultiblockControllerMachine.java:163`） |
+| `IParallelHatch` / `IParallelHatch#parallelHatch()` | 接口删了；`MultiblockControllerMachine#parallelHatch` 返回 `Optional<ParallelHatchPartMachine>`，控制器认并行仓靠 `instanceof`（`MultiblockControllerMachine.java:183,313`） |
+| `class MyLogic(machine: IRecipeLogicMachine) : RecipeLogic(machine)` | `WorkableMultiblockMachine#recipeLogic` 是 **`public final` 字段、由机器构造器注入**（`AssemblyLineMachine.java:48`）⇒ 自写逻辑必须**无参构造**，机器从 `getRLMachine()` 取（`super` 之前用不了 `this`） |
+| 概率产出用 `GTRecipeType#chanceFunction` / `getBoostedChance` | 都删了；期望值口径改 `数量 × recipe.getTotalRuns() × chance / maxChance`（`RecipeOutputProvider.java:95`） |
+| `MetaMachineBlockEntity` | 没了，`MetaMachine` 自己 extends `ManagedSyncBlockEntity` ⇒ Jade 里 `accessor.getBlockEntity() as? MetaMachine` 即可 |
+| 自写配方循环 | 8.0.0 新增 `RecipeHelper#doPrerolls` / `#doTickPrerolls`（`RecipeHelper.java:449,500`），**必须补**，否则 `IntProviderIngredient` 的区间内容会按未展开的区间去用 |
+| `stack.save(new CompoundTag())` 往返 NBT | 1.21 必须带 registryAccess：`ItemStack.CODEC` + `NbtOps` + `level.registryAccess().createSerializationContext(...)` |
+| `recipe.id` | 8.0.0 是 public 字段 + `getId()` 并存（Kotlin 解析会歧义）⇒ 统一显式写 `recipe.getId()` |
+| `typealias` 放类里 | Kotlin 语法不允许，必须放文件顶层 |
 
 ---
 
@@ -343,6 +352,40 @@ org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException:
 **实际影响（可忽略）**：MUI 的 `RecipeViewerHandler.getCurrent()` 选择顺序是 **EMI → REI → JEI → dummy**，装了 EMI 的包里 MUI 的槽位工厂拿到的是 **EMI** 实现；被削掉的只是 MUI 的 **JEI 槽位粘合层**（配料替换/轮换这类附加行为），GT 自己的 JEI 配方页（用 JEI 原生 API 建槽）不受影响，实测那页仍渲染正常。
 
 **结论**：等 MUI（或 GTM 捆绑的 MUI）自己支持 JEI 19.51+，不是我们能 patch 的层。
+
+---
+
+## 15. 自写 `RecipeLogic` 时「只覆写 getter」改不动 GTM 的单进度显示（严重度：中 · 状态：已修；百分比读的是**裸字段**）
+
+**一句话**：GTM 的单进度 UI 里「进度 / 时长」两个数走 `getProgress()` / `getMaxProgress()`（可覆写），但**百分比走 `getProgressPercent()`，它直接 `getfield` 读 `progress` / `duration` 两个受保护字段、完全不经过 getter** —— 只覆写 getter 的话进度条会显示「1234/5678 t (0%)」这种自相矛盾的组合。
+
+**来源**：无报错（纯显示问题）。
+
+**成因**（`javap -p -c` 逐条核对）：
+
+- `RecipeLogic.getProgressPercent()`（`RecipeLogic.java:229-236`）= `duration != 0 ? (double) progress / duration : 0`，字节码里是 `getfield progress` / `getfield duration`；
+- 用到它的地方：`GTMultiblockTextUtil#addProgressLine` / `#addProgressLinePercentOnly`（多方块面板那条进度行）、`GTSingleblockMachinePanels`、`CokeOvenMachine` / `PrimitiveBlastFurnaceMachine` / 蒸汽锅炉等自带面板；
+- 这些是 **MUI 的 `DoubleSyncValue`**：值在**服务端**求出来再推给客户端 ⇒ 服务端读到 0，客户端就是 0；
+- 而 `progress` / `duration` 的注解只有 `@SaveField`（**不是 `@SyncToClient`**，`RL_v.txt` 常量池 `#642=SaveField`）⇒ 客户端自己那份永远是 0，指望「客户端字段会同步过来」也没戏。
+
+**处理**：把镜像写回**字段**而不是只覆写 getter ——
+
+```kotlin
+private fun mirrorToBaseFields() {
+    val primary = primaryThread()
+    lastRecipe = primary?.recipe
+    lastUnrolledRecipe = primary?.unrolled
+    progress = primary?.progress ?: 0
+    duration = primary?.duration ?: 0
+    isActive = primary != null
+}
+```
+
+- 这几个字段在 8.0.0 是 `protected` 且**非 final**，Kotlin 子类**可以直接赋值**（`lastRecipe` / `duration` / `isActive` 没 setter ⇒ 走字段；`progress` 会被解析成 `setProgress(int)`，而它内部就是 `putfield progress`，等价）；
+- `getProgressPercent()` / `getProgress()` / `getMaxProgress()` / `getLastRecipe()` 全都直接读字段 ⇒ 写字段一次性覆盖所有读法，不用再逐个覆写 getter；
+- 多线程机器上这套单进度字段只能反映一条线程，逐线程的真实进度另走我们自己的显示层。
+
+**结论**：任何自写 `RecipeLogic` 子类，**镜像必须落字段**；「有没有 setter」不是判断依据（`javap` 只列方法，容易误判成"只读"）。
 
 ---
 
