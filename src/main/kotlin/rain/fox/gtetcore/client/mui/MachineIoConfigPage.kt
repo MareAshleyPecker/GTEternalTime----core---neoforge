@@ -6,11 +6,12 @@ import brachy.modularui.api.drawable.IDrawable
 import brachy.modularui.api.drawable.Text
 import brachy.modularui.api.widget.IWidget
 import brachy.modularui.drawable.DynamicDrawable
+import brachy.modularui.drawable.GuiDraw
 import brachy.modularui.drawable.GuiTextures
 import brachy.modularui.drawable.ItemDrawable
 import brachy.modularui.drawable.Rectangle
-import brachy.modularui.drawable.SpriteDrawable
 import brachy.modularui.drawable.UITexture
+import brachy.modularui.integration.embeddium.SodiumCompat
 import brachy.modularui.screen.viewport.GuiContext
 import brachy.modularui.theme.WidgetTheme
 import brachy.modularui.value.BoolValue
@@ -26,8 +27,10 @@ import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.machine.mui.MachineUIPanel
 import com.gregtechceu.gtceu.common.machine.trait.AutoOutputTrait
 import com.gregtechceu.gtceu.common.mui.GTGuiTextures
+import com.mojang.blaze3d.systems.RenderSystem
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer
 import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.texture.TextureAtlasSprite
 import net.minecraft.core.Direction
 import net.minecraft.network.chat.Component
 import net.minecraft.util.RandomSource
@@ -52,11 +55,24 @@ private const val SYNC_ALLOW_IN_FLUID = "gtetscore_io_allow_in_fluid"
 private const val NO_FACE = -1
 
 /** 小框尺寸、格边长、格间距、开关边长。 */
-private const val BOX_WIDTH = 88
+private const val BOX_WIDTH = 96
 private const val BOX_HEIGHT = 142
 private const val FACE_CELL_SIZE = 24
 private const val CELL_GAP = 2
 private const val TOGGLE_SIZE = 16
+
+/** 面名缩写的落点：按 MC 字体里一个全角字约 9px 居中。 */
+private const val CELL_LABEL_OFFSET = (FACE_CELL_SIZE - 9) / 2
+
+/**
+ * 小框相对**主内容区**（`MachineUIPanel.DEFAULT_CONTENT_WIDTH/HEIGHT`，固定 169×77）的像素偏移。
+ *
+ * ⚠️ 不用 `center()`：MUI 的 `horizontalCenter()`/`verticalCenter()` 字节码就是 `leftRel(0.5f)`/`topRel(0.5f)`，
+ * **不减自身一半尺寸**，等于把框的左上角对到父级中心（整体偏右下半个框）。也不要拿相对定位去对齐
+ * `coverChildren` 的父级（会和父级尺寸互相拉扯）。这里用已知尺寸算绝对像素。
+ */
+private val BOX_OFFSET_X: Int = (MachineUIPanel.DEFAULT_CONTENT_WIDTH - BOX_WIDTH) / 2
+private const val BOX_OFFSET_Y = -6
 
 /** 格子里的状态色蒙层 alpha 与描边宽度（贴图当前景太抢眼，状态得压得住）。 */
 private const val STATE_TINT_ALPHA = 120
@@ -134,7 +150,7 @@ object MachineIoConfig {
         val trait = machine.getTrait(AutoOutputTrait::class.java) ?: return
         if (!trait.supportsAutoOutputItems() && !trait.supportsAutoOutputFluids()) return
 
-        val page = MachineIoConfigPage(machine, trait, syncManager)
+        val page = MachineIoConfigPage(machine, trait, syncManager, panel.mainContents)
         val toggle = ToggleButton()
             .size(16)
             .overlay(GTGuiTextures.TOOL_IO_FACING_ROTATION)
@@ -153,7 +169,7 @@ object MachineIoConfig {
 }
 
 /**
- * 单格机器的输入输出配置小框（居中的浮动小块，默认隐藏），照 TE / Mek 那种六面图。
+ * 单格机器的输入输出配置小框（贴在主内容区上的浮动小块，默认隐藏），照 TE / Mek 那种六面图。
  *
  * 只用 GTM 真实支持的语义：物品输出面 / 流体输出面（各可为空，AutoOutputTrait.java:61-80）
  * + 自动输出开关 + 允许从输出面输入开关（:192-206、:184-190），
@@ -167,7 +183,9 @@ object MachineIoConfig {
 class MachineIoConfigPage(
     private val machine: MetaMachine,
     private val trait: AutoOutputTrait,
-    private val syncManager: PanelSyncManager
+    private val syncManager: PanelSyncManager,
+    /** 锚点：`MachineUIPanel` 的固定尺寸主内容区（169×77），用它算绝对像素位置。 */
+    private val anchor: IWidget
 ) : ParentWidget<MachineIoConfigPage>() {
 
     private val itemSupported: Boolean = trait.supportsAutoOutputItems()
@@ -192,7 +210,8 @@ class MachineIoConfigPage(
     init {
         name("gtetscore_io_config")
         size(BOX_WIDTH, BOX_HEIGHT)
-        center()
+        // 绝对像素定位（见 BOX_OFFSET_X 注释：center() 不减自身一半尺寸）
+        relative(anchor).left(BOX_OFFSET_X).top(BOX_OFFSET_Y)
         background(GTGuiTextures.BACKGROUND)
         excludeAreaInRecipeViewer()
         isEnabled = false
@@ -253,7 +272,12 @@ class MachineIoConfigPage(
         }
 
         return cell
-            .child(IoLabel(Supplier { Text.lang(slot.shortKey) }).center().color(CELL_TEXT_COLOR))
+            // 面名用像素定位（同样不用 center()），子件一定画在背景那三层之上
+            .child(
+                IoLabel(Supplier { Text.lang(slot.shortKey) })
+                    .pos(CELL_LABEL_OFFSET, CELL_LABEL_OFFSET)
+                    .color(CELL_TEXT_COLOR)
+            )
             .tooltipAutoUpdate(true)
             .tooltipBuilder { tip ->
                 tip.addLine(Text.lang(slot.langKey))
@@ -459,17 +483,22 @@ class MachineIoConfigPage(
         }
 
         /**
-         * 邻居朝机器的那一面 = 邻居自己的 `face.getOpposite()`。取不到就退回方块物品图标。
+         * 邻居朝机器的那一面 = 邻居自己的 `face.getOpposite()`；取不到就退回方块物品图标。
          *
-         * 这里要的就是「不带 modelData 的默认外观」，所以用三参 `getQuads`；它在 1.21 被标了 Deprecated
-         * （NeoForge 另加了带 `ModelData`/`RenderType` 的 `IBakedModelExtension#getQuads`）。
+         * 优先挑**正方形** sprite：GT 那种机壳模型的同一面会叠好几层 quad，其中 overlay 是
+         * 16×96 的六帧竖排贴图，整条画进格子就会糊成一团。
+         *
+         * 三参 `getQuads` 在 1.21 被标了 Deprecated（NeoForge 另加了带 `ModelData`/`RenderType` 的重载），
+         * 这里要的就是「不带 modelData 的默认外观」。
          */
         @Suppress("DEPRECATION")
         private fun buildIcon(state: BlockState, face: Direction): IDrawable? = try {
-            val sprite = Minecraft.getInstance().blockRenderer.getBlockModel(state)
+            val quads = Minecraft.getInstance().blockRenderer.getBlockModel(state)
                 .getQuads(state, face.opposite, RandomSource.create(SPRITE_SEED))
-                .firstOrNull()?.sprite
-            if (sprite != null) SpriteDrawable(sprite) else itemIcon(state)
+            val sprite = quads.firstOrNull { q ->
+                q.sprite.contents().let { c -> c.width() == c.height() }
+            }?.sprite ?: quads.firstOrNull()?.sprite
+            if (sprite != null) SpriteRegionDrawable(sprite) else itemIcon(state)
         } catch (t: Throwable) {
             itemIcon(state)
         }
@@ -502,4 +531,50 @@ private enum class FaceSlot(val langKey: String, val shortKey: String) {
     BOTTOM(MachineIoConfigLang.REL_BOTTOM, MachineIoConfigLang.REL_BOTTOM_SHORT),
     LEFT(MachineIoConfigLang.REL_LEFT, MachineIoConfigLang.REL_LEFT_SHORT),
     RIGHT(MachineIoConfigLang.REL_RIGHT, MachineIoConfigLang.REL_RIGHT_SHORT)
+}
+
+/**
+ * 按 sprite 的真实像素尺寸**等比、居中**画一格面贴图。
+ *
+ * MUI 现成的 `SpriteDrawable` → `GuiDraw.drawSprite` 用的是 `getU0/V0/U1/V1`（整张 sprite 的 UV）：
+ * 对**真动画贴图**这是对的（MC 把当前帧原地写进该区域，画整张就等于画当前帧，会自己动），
+ * 但 GT 那种 16×96 六帧竖排贴图会被整条压进格子里 —— 所以这里按 `contents()` 的高宽比切出**第一帧**。
+ */
+private class SpriteRegionDrawable(private val sprite: TextureAtlasSprite) : IDrawable {
+
+    /** 竖排多帧时只画第一帧的 V 范围；`width`/`height` 就是单帧尺寸。 */
+    private val vFraction: Float
+    private val frameWidth: Int
+    private val frameHeight: Int
+
+    init {
+        val contents = sprite.contents()
+        val width = contents.width().coerceAtLeast(1)
+        val height = contents.height().coerceAtLeast(1)
+        val frames = if (height % width == 0) (height / width).coerceAtLeast(1) else 1
+        vFraction = 1f / frames
+        frameWidth = width
+        frameHeight = height / frames
+    }
+
+    override fun draw(context: GuiContext, x: Int, y: Int, w: Int, h: Int, theme: WidgetTheme) {
+        // MC/Sodium 只给「活跃」的 sprite 走动画帧（MUI 自己在 schema 渲染里也这么干）
+        SodiumCompat.markSpritesAsActive(listOf(sprite))
+
+        // 等比缩放 + 居中，不拉伸
+        val scale = minOf(w.toFloat() / frameWidth, h.toFloat() / frameHeight)
+        val drawWidth = frameWidth * scale
+        val drawHeight = frameHeight * scale
+        val x1 = x + (w - drawWidth) / 2f
+        val y1 = y + (h - drawHeight) / 2f
+
+        RenderSystem.enableBlend()
+        RenderSystem.setShaderTexture(0, sprite.atlasLocation())
+        GuiDraw.drawTexture(
+            context.lastGraphicsPose,
+            x1, y1, x1 + drawWidth, y1 + drawHeight,
+            sprite.getU(0f), sprite.getV(0f), sprite.getU(1f), sprite.getV(vFraction)
+        )
+        RenderSystem.disableBlend()
+    }
 }
