@@ -59,9 +59,18 @@ private const val SCHEMA_DISTANCE = 2.0f
 private const val SCHEMA_YAW = 0.7853982f
 private const val HIGHLIGHT_THICKNESS = 1f / 32f
 
+/**
+ * 输出面标记的边框宽度（格）。
+ *
+ * ⚠️ 必须配 `BlockHighlight(color, allSides, thickness)` 这个三参构造器用：`BlockHighlight(color, thickness)`
+ * 那个重载的字节码是 `this(color, true, thickness)` —— `allSides` 被写死成 **true**，doRender 会把 direction
+ * 置 null 从而把**六个面**框一圈，既看不出是哪个面、1/32 的细边框在整流机器模型上也几乎看不见。
+ */
+private const val FACE_MARKER_THICKNESS = 1f / 8f
+
 private val BACKDROP_UNDERLAY: Int = Color.argb(255, 24, 26, 30)
-private val ITEM_FACE_COLOR: Int = Color.argb(235, 60, 220, 90)
-private val FLUID_FACE_COLOR: Int = Color.argb(235, 70, 170, 255)
+private val ITEM_FACE_COLOR: Int = Color.argb(255, 60, 220, 90)
+private val FLUID_FACE_COLOR: Int = Color.argb(255, 70, 170, 255)
 private val HOVER_FACE_COLOR: Int = Color.argb(160, 255, 255, 255)
 
 /**
@@ -344,7 +353,9 @@ private class IoFaceSchemaRenderer(
         val pose = createWorldRenderPose()
         val cameraPos = camera().pos()
         markers.forEach { (face, color) ->
-            BlockHighlight(color, HIGHLIGHT_THICKNESS).renderHighlight(pose, SCHEMA_ORIGIN, face, cameraPos)
+            // allSides = false：只在指定的那个面画框（true 会六个面都框一圈，看不出是哪个面）
+            BlockHighlight(color, false, FACE_MARKER_THICKNESS)
+                .renderHighlight(pose, SCHEMA_ORIGIN, face, cameraPos)
         }
 
         // BlockHighlight 只开了 blend、关了深度测试，画完还原，别污染后续 UI
