@@ -57,7 +57,7 @@ object AdvancedTerminalBuilder {
      * 老项目是 `AdvancedTerminalLang.build_too_many`；那个语言对象要连界面一起移植，
      * 这里先写死键名（值与原项目一致），等界面切片再把常量挪回去。
      */
-    private const val build_too_many: String = "item.gtetcore.advanced_terminal.build.too_many"
+    private const val build_too_many: String = "item.gtetscore.advanced_terminal.build.too_many"
 
     private val FACINGS = arrayOf(
         Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST

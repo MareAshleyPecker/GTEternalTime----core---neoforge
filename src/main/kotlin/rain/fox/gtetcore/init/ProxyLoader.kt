@@ -2,11 +2,11 @@ package rain.fox.gtetcore.init
 
 import net.neoforged.fml.loading.FMLEnvironment
 import org.apache.logging.log4j.Level
-import rain.fox.gtetcore.GTETCore
+import rain.fox.gtetcore.GTETSCore
 import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
 
 /**
- * 代理装配 —— 按**物理端**决定装哪几个代理。由 `GTETCore.init` 调用。
+ * 代理装配 —— 按**物理端**决定装哪几个代理。由 `GTETSCore.init` 调用。
  *
  * 规则（老工程 `rain.gtetcore.gtet.init` 的拆法的 NeoForge 版）：
  * - [CommonProxy]：配置 / 数据组件 / registrate 登记触发 / 语言键 / 通用事件监听 —— **两端都装**；
@@ -25,7 +25,7 @@ import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
  */
 object ProxyLoader {
 
-    /** 装配代理。整个 mod 只会从这里走一次（`GTETCore.init`）。 */
+    /** 装配代理。整个 mod 只会从这里走一次（`GTETSCore.init`）。 */
     @JvmStatic
     fun load() {
         // 通用代理：两端都要
@@ -37,6 +37,6 @@ object ProxyLoader {
             serverTarget = { }
         )
 
-        GTETCore.LOGGER.log(Level.INFO, "[GTET] 代理已装配（dist = {}）", FMLEnvironment.dist)
+        GTETSCore.LOGGER.log(Level.INFO, "[GTET] 代理已装配（dist = {}）", FMLEnvironment.dist)
     }
 }

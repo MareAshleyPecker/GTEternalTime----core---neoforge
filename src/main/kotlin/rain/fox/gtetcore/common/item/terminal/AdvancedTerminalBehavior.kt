@@ -36,7 +36,7 @@ import rain.fox.gtetcore.client.terminal.AdvancedTerminalPanel
 object AdvancedTerminalBehavior : IItemUIHolder {
 
     /** 「潜行右键的不是多方块控制器」提示键（老代码这一支是 AE 绑定手势，不提示）。 */
-    const val msg_not_controller: String = "item.gtetcore.advanced_terminal.build.not_controller"
+    const val msg_not_controller: String = "item.gtetscore.advanced_terminal.build.not_controller"
 
     override fun useOn(context: UseOnContext): InteractionResult {
         val player = context.player ?: return InteractionResult.PASS

@@ -16,7 +16,7 @@ import rain.fox.gtetcore.util.lang.LangUtil
 object AdvancedTerminalLang {
 
     /** 语言键前缀（与老项目一致，不要改）。 */
-    const val PREFIX: String = "item.gtetcore.advanced_terminal"
+    const val PREFIX: String = "item.gtetscore.advanced_terminal"
 
     const val TITLE: String = "$PREFIX.setting.title"
 

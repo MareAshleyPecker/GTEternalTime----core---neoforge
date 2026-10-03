@@ -8,7 +8,7 @@ import net.minecraft.data.recipes.RecipeOutput
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.neoforged.neoforge.common.Tags
-import rain.fox.gtetcore.GTETCore
+import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.registry.ETItems
 
 /**
@@ -25,7 +25,7 @@ import rain.fox.gtetcore.registry.ETItems
  * （图案 `SGS/PBP/PWP` 与本条一模一样，只是材料用的是锻铁 + 红合金单线）—— 8.0.0 里 GT 的工作台配方
  * 就是普通原版合成配方，用 `MaterialEntry` 交给 helper 去解析成材料标签。
  *
- * ⚠️ 配方 id 走 [GTETCore.id]（= `gtetcore:advanced_terminal`）：helper 的 `String` 重载会把 id
+ * ⚠️ 配方 id 走 [GTETSCore.id]（= `gtetscore:advanced_terminal`）：helper 的 `String` 重载会把 id
  * 拼到 `gtceu:` 命名空间下（内部写死 `GTCEu.id(regName)`），那是 GTM 本体用的，addon 不能用。
  */
 object TerminalRecipes {
@@ -35,7 +35,7 @@ object TerminalRecipes {
     fun init(provider: RecipeOutput) {
         VanillaRecipeHelper.addShapedRecipe(
             provider,
-            GTETCore.id("advanced_terminal"),
+            GTETSCore.id("advanced_terminal"),
             ETItems.ADVANCED_TERMINAL.asStack(),
             "SGS", "PBP", "PWP",
             'S', MaterialEntry(TagPrefix.screw, GTMaterials.Steel),

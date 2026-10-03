@@ -101,7 +101,7 @@ class ETParallelHatchPartMachine(
                         .setDefaultNumber(etMaxParallel.toDouble())
                         .margin(4)
                 )
-                .child(Text.lang("block.gtetcore.${definition.name}").asWidget().margin(4).verticalCenter())
+                .child(Text.lang("block.gtetscore.${definition.name}").asWidget().margin(4).verticalCenter())
         )
     }
 

@@ -2,7 +2,7 @@ package rain.fox.gtetcore.data.lang
 
 import net.minecraft.data.PackOutput
 import net.neoforged.neoforge.common.data.LanguageProvider
-import rain.fox.gtetcore.GTETCore
+import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.util.lang.LangUtil
 
 /**
@@ -14,12 +14,12 @@ import rain.fox.gtetcore.util.lang.LangUtil
  * 中文条目先登记进 [LangUtil]，再由本生成器统一写盘；材料类前缀翻译等后续功能移植过来时
  * 照老项目那样往 [LangUtil] 里补即可。
  */
-class ZhCnLangProvider(output: PackOutput) : LanguageProvider(output, GTETCore.ID, "zh_cn") {
+class ZhCnLangProvider(output: PackOutput) : LanguageProvider(output, GTETSCore.ID, "zh_cn") {
 
     override fun addTranslations() {
-        LangUtil.BLOCK_LANG.forEach { (id, name) -> add("block.${GTETCore.ID}.$id", name) }
-        LangUtil.ITEM_LANG.forEach { (id, name) -> add("item.${GTETCore.ID}.$id", name) }
-        LangUtil.TAB_LANG.forEach { (id, name) -> add("itemGroup.${GTETCore.ID}.$id", name) }
+        LangUtil.BLOCK_LANG.forEach { (id, name) -> add("block.${GTETSCore.ID}.$id", name) }
+        LangUtil.ITEM_LANG.forEach { (id, name) -> add("item.${GTETSCore.ID}.$id", name) }
+        LangUtil.TAB_LANG.forEach { (id, name) -> add("itemGroup.${GTETSCore.ID}.$id", name) }
         LangUtil.CUSTOM_LANG.forEach { (key, pair) -> add(key, pair.second) }
     }
 }

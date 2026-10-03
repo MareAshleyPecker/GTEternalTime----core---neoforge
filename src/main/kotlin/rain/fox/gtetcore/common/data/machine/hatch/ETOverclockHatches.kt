@@ -1,6 +1,5 @@
 package rain.fox.gtetcore.common.data.machine.hatch
 
-import com.gregtechceu.gtceu.GTCEu
 import com.gregtechceu.gtceu.api.GTValues
 import com.gregtechceu.gtceu.api.data.RotationState
 import com.gregtechceu.gtceu.api.machine.MachineDefinition
@@ -11,7 +10,7 @@ import com.gregtechceu.gtceu.api.registry.registrate.entry.MachineEntry
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels.createWorkableTieredHullMachineModel
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
-import rain.fox.gtetcore.GTETCore
+import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.api.capability.ETPartAbility
 import rain.fox.gtetcore.common.machine.multiblock.part.ETOverclockHatchPartMachine
 import rain.fox.gtetcore.registry.machineBuilder
@@ -59,7 +58,7 @@ object ETOverclockHatches {
     private const val overclock_mk_min = 1
     private const val overclock_mk_max = 7
 
-    private fun overlayFor(v: OverclockHatchVariant): ResourceLocation = GTETCore.id(
+    private fun overlayFor(v: OverclockHatchVariant): ResourceLocation = GTETSCore.id(
         GTOCORE_NS,
         overclock_overlay_root + (v.tier - GTValues.ZPM).coerceIn(overclock_mk_min, overclock_mk_max)
     )
@@ -111,7 +110,7 @@ object ETOverclockHatches {
 
         LangUtil.BLOCK_LANG[v.id] = "$tierName 超频仓（${v.speed}× Speed|×$eut Energy）"
         v.tooltip?.let {
-            val key = "gtetcore.machine.${v.id}.tooltip.0"
+            val key = "gtetscore.machine.${v.id}.tooltip.0"
             LangUtil.add(key, it.en, it.cn)
         }
 
@@ -129,7 +128,7 @@ object ETOverclockHatches {
             .model(createWorkableTieredHullMachineModel(overlayFor(v)))
 
         // 只有少数档位有额外说明行
-        v.tooltip?.let { builder.tooltips(Component.translatable("gtetcore.machine.${v.id}.tooltip.0")) }
+        v.tooltip?.let { builder.tooltips(Component.translatable("gtetscore.machine.${v.id}.tooltip.0")) }
 
         // 共享提示走渲染时取值，因为能不能共享由配置里的全局开关决定
         return builder.tooltipBuilder { _, list -> list.add(ETPartSharing.line()) }.register()

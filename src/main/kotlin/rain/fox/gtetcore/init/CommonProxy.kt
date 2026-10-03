@@ -8,10 +8,11 @@ import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.common.NeoForge
 import net.neoforged.neoforge.data.event.GatherDataEvent
 import org.apache.logging.log4j.Level
-import rain.fox.gtetcore.GTETCore
+import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
 import rain.fox.gtetcore.config.GtetConfig
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
+import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
 import rain.fox.gtetcore.data.recipe.ETRecipeProvider
 import rain.fox.gtetcore.registry.ETDataComponents
@@ -38,7 +39,7 @@ import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
  * 原因在 `net.neoforged.bus.EventBus`：`register(Object)` 先 `checkSupertypes` **递归拒绝所有
  * 父类 / 接口里声明的 `@SubscribeEvent`**，再只用 `getDeclaredMethods()` 扫本类声明的监听器 ——
  * 继承来的监听器既不会被登记，也不允许存在。所以这边改成：**两端都构造一个 [CommonProxy]，
- * 客户端再额外构造一个 [ClientProxy]**（见 `GTETCore.init`）。
+ * 客户端再额外构造一个 [ClientProxy]**（见 `GTETSCore.init`）。
  *
  * ⚠️ 这里用的是 `bus.register(this)` + `@SubscribeEvent`（老工程的写法），**不是** `@EventBusSubscriber`：
  * 后者会触发 KFF 5.7.0 的 `AutoKotlinEventBusSubscriber`，它去调 FML 4.0.44 里已删除的
@@ -80,12 +81,13 @@ class CommonProxy {
         @Suppress("UNUSED_EXPRESSION") TestMachines.test_sync_part
         @Suppress("UNUSED_EXPRESSION") ETMachines.parallel_hatch_iv
         @Suppress("UNUSED_EXPRESSION") ETItems.ADVANCED_TERMINAL
+        @Suppress("UNUSED_EXPRESSION") ETItems.CLOCK_OF_TIME_SEQUENCE
         initLang()
 
-        GTETCore.LOGGER.log(
+        GTETSCore.LOGGER.log(
             Level.INFO,
             "[GTET-TEST] 阶段 3 测试机器已登记：{}:test_sync_part，registrate 命名空间 = {}",
-            GTETCore.ID, ETRegistrate.REGISTRATE.modid
+            GTETSCore.ID, ETRegistrate.REGISTRATE.modid
         )
 
         // 高级终端静态组预置：GAME 总线的手工注册。
@@ -96,12 +98,14 @@ class CommonProxy {
     private fun initLang(){
         // 高级终端设置面板的语言键（必须早于 runData 的数据生成）
         AdvancedTerminalLang.register()
+        // 时序钟的运行时语言键（tooltip 的汇率 / 相位 / 存量那几行）
+        TimeClockLang.register()
     }
 
     /**
      * 通用设置阶段。
      *
-     * ⚠️ 这一段原来挂在 `GTETCore` 的 `@JvmStatic fun onCommonSetup` 上，但那个类**既没有**
+     * ⚠️ 这一段原来挂在 `GTETSCore` 的 `@JvmStatic fun onCommonSetup` 上，但那个类**既没有**
      * `@EventBusSubscriber`（用不了，见类注释）**也没有**人调 `MOD_BUS.addListener` ——
      * 也就是说它从来没被登记过，是死代码。搬进代理、靠 `register(this)` 挂上才真的会跑。
      *
@@ -111,10 +115,10 @@ class CommonProxy {
      */
     @SubscribeEvent
     private fun onCommonSetup(event: FMLCommonSetupEvent) {
-        GTETCore.LOGGER.log(Level.INFO, "Hello! This is working!")
+        GTETSCore.LOGGER.log(Level.INFO, "Hello! This is working!")
 
         // 最小测试（阶段 1）：证明 GTCEu 8.0.0（1.21.1）在类路径上、API 真的能调用。
-        GTETCore.LOGGER.log(
+        GTETSCore.LOGGER.log(
             Level.INFO,
             "[GTET-TEST] GTCEu 可调用：HV = {} EU/t，电压档位数 = {}，GTCEuAPI 类 = {}",
             GTValues.V[GTValues.HV], GTValues.V.size, GTCEuAPI::class.java.name
@@ -129,13 +133,13 @@ class CommonProxy {
      */
     @SubscribeEvent
     fun onServerSetup(event: FMLDedicatedServerSetupEvent) {
-        GTETCore.LOGGER.log(Level.INFO, "Server starting...")
+        GTETSCore.LOGGER.log(Level.INFO, "Server starting...")
     }
 
     /**
      * 数据生成入口：en_us / en_ud 由 registrate 自己写，这里只补 zh_cn 与工作台配方（各写各的文件，不抢路径）。
      *
-     * 配方是服务端数据（`data/gtetcore/recipe/`），所以挂 [GatherDataEvent.includeServer] 那一支；
+     * 配方是服务端数据（`data/gtetscore/recipe/`），所以挂 [GatherDataEvent.includeServer] 那一支；
      * 语言文件是客户端资源，挂 `includeClient()`。
      */
     @SubscribeEvent

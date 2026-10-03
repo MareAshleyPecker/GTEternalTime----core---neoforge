@@ -63,4 +63,14 @@ object ETMachines {
     /** 线程仓：变体表还没移植，先给空占位（静态组表拿不齐就不缓存，会自动重算）。 */
     @JvmField
     val THREAD_HATCHES: List<MachineEntry<MachineDefinition>> = emptyList()
+
+    init {
+        // 归页：并行仓 / 超频仓 / 线程仓全部进 GTET 机器页。
+        // ⚠️ 这里必须用 assignTab 补页而不是在注册前设「当前页」——三张表都是在上面登记的，
+        //    时机已经过了；assignTab 内部会取回 ITEM 注册表那份条目再登记（原因见它的注释）。
+        ETRegistrate.REGISTRATE.assignTab(
+            ETCreativeModeTabs.MACHINE,
+            PARALLEL_HATCHES + OVERCLOCK_HATCHES + THREAD_HATCHES,
+        )
+    }
 }

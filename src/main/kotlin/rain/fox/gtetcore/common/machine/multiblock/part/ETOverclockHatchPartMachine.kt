@@ -40,7 +40,7 @@ class ETOverclockHatchPartMachine(
         syncManager: PanelSyncManager,
         settings: UISettings,
     ) {
-        mainWidget.child(Text.lang("block.gtetcore.${definition.name}").asWidget().margin(6))
+        mainWidget.child(Text.lang("block.gtetscore.${definition.name}").asWidget().margin(6))
     }
 
     /**

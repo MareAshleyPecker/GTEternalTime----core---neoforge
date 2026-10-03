@@ -11,7 +11,7 @@ import rain.fox.gtetcore.registry.ETDataComponents
  * 高级终端的 8 项设置。
  *
  * 1.20.1 时代这 8 个键是直接写在物品 NBT 顶层的；1.21 取消了物品 NBT，
- * 所以改成**一个数据组件**（`gtetcore:terminal_settings`），编解码由 [CODEC] / [STREAM_CODEC] 负责。
+ * 所以改成**一个数据组件**（`gtetscore:terminal_settings`），编解码由 [CODEC] / [STREAM_CODEC] 负责。
  *
  * ⚠️ 默认值即行为：`noHatch` 默认 **false**（会照 JEI 预览那样把仓室也放上）。
  * 老项目这里默认是 true，导致新终端默认不铺仓室、JEI 里显示的初始仓室位在实搭时全是空气、

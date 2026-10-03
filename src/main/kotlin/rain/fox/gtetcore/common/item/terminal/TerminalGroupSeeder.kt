@@ -4,12 +4,12 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
-import rain.fox.gtetcore.GTETCore
+import rain.fox.gtetcore.GTETSCore
 
 /**
  * 把 [TerminalStaticGroups] 的 6 类静态组预置进玩家手上的高级终端数据组件。
  *
- * 目的：终端面板读的是终端里的分级组（`gtetcore:terminal_data` 的 groups），
+ * 目的：终端面板读的是终端里的分级组（`gtetscore:terminal_data` 的 groups），
  * 只有「潜行右键控制器扫描过」才有内容。这里在服务端每 tick 看一眼主手物品，
  * 是终端就把静态组补进去，于是**不扫描也能直接列出**线圈 / 能源仓 / 超频仓 / 线程仓 / 并行仓 / 维护仓这 6 类。
  *
@@ -29,14 +29,14 @@ import rain.fox.gtetcore.GTETCore
 object TerminalGroupSeeder {
 
     /** 自建高级终端的注册名。 */
-    private const val TERMINAL_ID = "gtetcore:advanced_terminal"
+    private const val TERMINAL_ID = "gtetscore:advanced_terminal"
 
     /** 懒解析 + 缓存的目标物品。 */
     private val TERMINALS: MutableList<Item> = ArrayList(1)
 
     private var resolved = false
 
-    /** GAME 总线监听；注册见 [GTETCore.init]（`NeoForge.EVENT_BUS.addListener`）。 */
+    /** GAME 总线监听；注册见 [GTETSCore.init]（`NeoForge.EVENT_BUS.addListener`）。 */
     @JvmStatic
     fun onPlayerTick(event: PlayerTickEvent.Post) {
         val player = event.entity

@@ -6,7 +6,11 @@ import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.registry.registrate.GTRegistrate
 import com.gregtechceu.gtceu.api.registry.registrate.builder.MachineBuilder
 import com.tterrag.registrate.providers.ProviderType
-import rain.fox.gtetcore.GTETCore
+import com.tterrag.registrate.util.entry.RegistryEntry
+import net.minecraft.core.registries.Registries
+import net.minecraft.world.item.CreativeModeTab
+import net.minecraft.world.item.Item
+import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.util.lang.LangUtil
 
 /**
@@ -17,7 +21,7 @@ import rain.fox.gtetcore.util.lang.LangUtil
 object ETRegistrate {
 
     @JvmField
-    val REGISTRATE: GTRegistrate = GTRegistrate.create(GTETCore.ID)
+    val REGISTRATE: GTRegistrate = GTRegistrate.create(GTETSCore.ID)
 
     init {
         // 双语条目分工：英文进 registrate 的 en_us，中文由 ZhCnLangProvider 写进 zh_cn。
@@ -38,3 +42,53 @@ fun <M : MetaMachine> GTRegistrate.machineBuilder(
     name: String,
     factory: MachineInstanceFactory<M>,
 ): MachineBuilder<MachineDefinition, M, *> = machine(name, factory)
+
+/**
+ * 归页入口：在 [block] 里注册的物品 / 机器 / 方块**自动落进** [tab]。
+ *
+ * GTM 的 `creativeModeTab(tab)` 设的是「当前页」，只对**之后**注册的东西生效
+ * （GTM 自己就这么用，见 `GTMachines` 的静态块），所以必须把注册语句包在里面：
+ * ```
+ * REGISTRATE.inTab(ETCreativeModeTabs.ITEM) {
+ *     REGISTRATE.item("clock_of_time_sequence", ::ComponentItem)...register()
+ * }
+ * ```
+ * 出了块就恢复调用前的「当前页」，免得后面别的注册被顺手带走。
+ */
+fun <T> GTRegistrate.inTab(
+    tab: RegistryEntry<CreativeModeTab, out CreativeModeTab>,
+    block: () -> T,
+): T {
+    val previous = creativeModeTab()
+    creativeModeTab(tab)
+    try {
+        return block()
+    } finally {
+        if (previous == null) resetCreativeModeTab() else creativeModeTab(previous)
+    }
+}
+
+/**
+ * 补页入口：把**已经注册完、来不及用 [inTab] 包住**的条目显式归到 [tab]。
+ *
+ * ⚠️ 这里必须先绕一道「取同名的 ITEM 那一份条目」，不能把 [entries] 直接喂给
+ * `GTRegistrate.setCreativeTab(entry, tab)`：创造页内容生成器
+ * （`GTCreativeModeTabs.RegistrateDisplayItemsGenerator`）是遍历 `getAll(Registries.ITEM)`
+ * 拿到的条目去查表的，而 `TAB_LOOKUP` 是 `IdentityHashMap`、按**对象身份**比对
+ * （`isInCreativeTab` 的实现就是 `TAB_LOOKUP.get(entry) == tab`）。
+ * 机器手里那份是 `MachineEntry`（注册在 MACHINE 注册表）、方块是 `BlockEntry`（BLOCK 注册表），
+ * 与 ITEM 注册表那份**不是同一个对象** —— 直接传进去会静默失效、机器依然不进页。
+ *
+ * 同一件物品重复归页是幂等的（表里只是被覆盖成同一个值）。
+ */
+fun GTRegistrate.assignTab(
+    tab: RegistryEntry<CreativeModeTab, out CreativeModeTab>,
+    entries: Iterable<RegistryEntry<*, *>>,
+) {
+    for (entry in entries) {
+        // 按注册名取回 ITEM 注册表那一份；取不到（无对应物品）就跳过，不让它炸构造期
+        val itemEntry: RegistryEntry<Item, Item>? =
+            getOptional<Item, Item>(entry.id.path, Registries.ITEM).orElse(null)
+        if (itemEntry != null) setCreativeTab(itemEntry, tab)
+    }
+}
