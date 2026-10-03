@@ -52,7 +52,7 @@ object AdvancedTerminalLang {
     /**
      * 幂等登记（同名键重复登记只是覆盖同一张表）。
      *
-     * 必须在 mod 构造期调用一次（见 `Gtetcore.init`），早于 `runData` 的数据生成。
+     * 必须在 mod 构造期调用一次（由 `CommonProxy.kotlinInit` 调），早于 `runData` 的数据生成。
      */
     @JvmStatic
     fun register() {

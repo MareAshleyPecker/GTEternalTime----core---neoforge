@@ -4,7 +4,7 @@ package rain.fox.gtetcore.config
 import net.neoforged.fml.ModList
 import net.neoforged.fml.config.ModConfig
 import net.neoforged.neoforge.common.ModConfigSpec
-import rain.fox.gtetcore.Gtetcore
+import rain.fox.gtetcore.GTETCore
 
 /**
  * GTET 的 COMMON 配置（NeoForge 的 [ModConfigSpec]，对应 1.20.1 时代的 ForgeConfigSpec）。
@@ -79,7 +79,7 @@ object GtetConfig {
 
     /** 在 mod 构造期注册配置；必须在构造期调，否则 NeoForge 不会加载它。 */
     fun register() {
-        ModList.get().getModContainerById(Gtetcore.ID).ifPresent {
+        ModList.get().getModContainerById(GTETCore.ID).ifPresent {
             it.registerConfig(ModConfig.Type.COMMON, spec)
         }
     }

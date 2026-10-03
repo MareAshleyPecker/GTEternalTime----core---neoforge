@@ -6,7 +6,7 @@ import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.registry.registrate.GTRegistrate
 import com.gregtechceu.gtceu.api.registry.registrate.builder.MachineBuilder
 import com.tterrag.registrate.providers.ProviderType
-import rain.fox.gtetcore.Gtetcore
+import rain.fox.gtetcore.GTETCore
 import rain.fox.gtetcore.util.lang.LangUtil
 
 /**
@@ -17,7 +17,7 @@ import rain.fox.gtetcore.util.lang.LangUtil
 object ETRegistrate {
 
     @JvmField
-    val REGISTRATE: GTRegistrate = GTRegistrate.create(Gtetcore.ID)
+    val REGISTRATE: GTRegistrate = GTRegistrate.create(GTETCore.ID)
 
     init {
         // 双语条目分工：英文进 registrate 的 en_us，中文由 ZhCnLangProvider 写进 zh_cn。

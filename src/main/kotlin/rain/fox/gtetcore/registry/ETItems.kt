@@ -2,17 +2,16 @@ package rain.fox.gtetcore.registry
 
 import com.gregtechceu.gtceu.api.item.ComponentItem
 import com.tterrag.registrate.util.entry.ItemEntry
-import net.minecraft.resources.ResourceLocation
-import rain.fox.gtetcore.Gtetcore
+import rain.fox.gtetcore.GTETCore
 import rain.fox.gtetcore.common.item.terminal.AdvancedTerminalBehavior
 import rain.fox.gtetcore.util.lang.LangUtil
 
 /**
  * GTET 物品注册入口。
  *
- * 目前只登记高级终端这一件（本阶段只做「潜行右键控制器 = 自动搭建」，设置面板与 AE 链接留给后续切片）。
+ * 目前只登记高级终端这一件（潜行右键控制器 = 自动搭建；右键空气 = 开 MUI 设置面板。AE 链接留给后续切片）。
  * Registrate 是在 builder 被创建的那一刻就登记的，所以**必须在 mod 构造期取一次**
- * [ADVANCED_TERMINAL] 的值（见 `Gtetcore.init`），否则物品进不了注册表。
+ * [ADVANCED_TERMINAL] 的值（见 `CommonProxy.kotlinInit`），否则物品进不了注册表。
  */
 object ETItems {
 
@@ -49,7 +48,7 @@ object ETItems {
             .properties { properties -> properties.stacksTo(1) }
             // 贴图自备：assets/gtetcore/textures/item/advanced_terminal.png
             .model { ctx, provider ->
-                provider.generated(ctx, ResourceLocation.fromNamespaceAndPath(Gtetcore.ID, "item/advanced_terminal"))
+                provider.generated(ctx, GTETCore.id("item/advanced_terminal"))
             }
             .onRegister { item -> item.attachComponents(AdvancedTerminalBehavior) }
             .register()

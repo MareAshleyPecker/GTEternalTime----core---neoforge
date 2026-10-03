@@ -4,7 +4,7 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
-import rain.fox.gtetcore.Gtetcore
+import rain.fox.gtetcore.GTETCore
 
 /**
  * 把 [TerminalStaticGroups] 的 6 类静态组预置进玩家手上的高级终端数据组件。
@@ -24,7 +24,7 @@ import rain.fox.gtetcore.Gtetcore
  * `bus` 成员（那个枚举 `@Deprecated(forRemoval = true)`），而 KFF 5.7.0 的
  * `AutoKotlinEventBusSubscriber` 又会去调 FML 4.0.44 里**已被删除**的 `net.neoforged.fml.Bindings`
  * —— 只要存在带该注解的 Kotlin `object`，mod 构造期就 `NoClassDefFoundError` 直接崩（runData/游戏都起不来）。
- * 所以改由 `Gtetcore.init` 里手工挂到 GAME 总线（KFF 源码里也建议直接手工注册）。
+ * 所以改由 `CommonProxy.kotlinInit` 里手工挂到 GAME 总线（KFF 源码里也建议直接手工注册）。
  */
 object TerminalGroupSeeder {
 
@@ -36,7 +36,7 @@ object TerminalGroupSeeder {
 
     private var resolved = false
 
-    /** GAME 总线监听；注册见 [Gtetcore.init]（`NeoForge.EVENT_BUS.addListener`）。 */
+    /** GAME 总线监听；注册见 [GTETCore.init]（`NeoForge.EVENT_BUS.addListener`）。 */
     @JvmStatic
     fun onPlayerTick(event: PlayerTickEvent.Post) {
         val player = event.entity

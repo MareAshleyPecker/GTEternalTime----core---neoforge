@@ -11,6 +11,7 @@ import com.gregtechceu.gtceu.api.registry.registrate.entry.MachineEntry
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels.createWorkableTieredHullMachineModel
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import rain.fox.gtetcore.GTETCore
 import rain.fox.gtetcore.api.capability.ETPartAbility
 import rain.fox.gtetcore.common.machine.multiblock.part.ETOverclockHatchPartMachine
 import rain.fox.gtetcore.registry.machineBuilder
@@ -58,7 +59,7 @@ object ETOverclockHatches {
     private const val overclock_mk_min = 1
     private const val overclock_mk_max = 7
 
-    private fun overlayFor(v: OverclockHatchVariant): ResourceLocation = ResourceLocation.fromNamespaceAndPath(
+    private fun overlayFor(v: OverclockHatchVariant): ResourceLocation = GTETCore.id(
         GTOCORE_NS,
         overclock_overlay_root + (v.tier - GTValues.ZPM).coerceIn(overclock_mk_min, overclock_mk_max)
     )
