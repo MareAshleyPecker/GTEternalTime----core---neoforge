@@ -345,8 +345,10 @@ object AdvancedTerminalBuilder {
             val index = settings.coilTier.coerceAtMost(candidates.size) - 1
             result = listOf(candidates[index.coerceAtLeast(0)])
         }
-        // 无仓室模式：默认不主动放仓室（看候选第 1 项是不是多方块部件）
-        if (settings.noHatch && !required && isHatch(result[0])) return emptyList()
+        // 无仓室模式：仓室格改放对应的机械方块（不放仓室、也不留空）
+        if (settings.noHatch && !required) {
+            result.firstOrNull { !isHatch(it) }?.let { return listOf(it) }
+        }
         return result
     }
 

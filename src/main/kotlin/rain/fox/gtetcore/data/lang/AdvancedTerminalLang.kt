@@ -89,8 +89,8 @@ object AdvancedTerminalLang {
         LangUtil.add(SETTING_3, "No Hatch mode", "无仓室模式")
         LangUtil.add(
             SETTING_3_TIP,
-            "Whether to enable the no-Hatch mode. After enabling the no-chamber mode, various Hatch will not be placed when they are not unique.",
-            "是否启用无仓室模式。启用无仓室模式后不会在非唯一时放置各种仓室。"
+            "Whether to enable the no-Hatch mode. When enabled hatches are not placed: their positions are filled with the matching machine casing instead (hatches the structure requires are still placed).",
+            "是否启用无仓室模式。启用后不放置仓室，仓室位改放对应的机械方块（结构必需的仓室仍会放置）。"
         )
         LangUtil.add(SETTING_4, "Coil replace mode", "线圈替换模式")
         LangUtil.add(

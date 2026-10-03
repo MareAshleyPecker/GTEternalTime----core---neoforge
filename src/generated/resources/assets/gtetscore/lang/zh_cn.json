@@ -70,7 +70,7 @@
   "item.gtetscore.advanced_terminal.setting.2": "重复结构次数",
   "item.gtetscore.advanced_terminal.setting.2.tooltip": "用于设置可重复结构(蒸馏塔、装配线等)的重复部分放置次数",
   "item.gtetscore.advanced_terminal.setting.3": "无仓室模式",
-  "item.gtetscore.advanced_terminal.setting.3.tooltip": "是否启用无仓室模式。启用无仓室模式后不会在非唯一时放置各种仓室。",
+  "item.gtetscore.advanced_terminal.setting.3.tooltip": "是否启用无仓室模式。启用后不放置仓室，仓室位改放对应的机械方块（结构必需的仓室仍会放置）。",
   "item.gtetscore.advanced_terminal.setting.4": "线圈替换模式",
   "item.gtetscore.advanced_terminal.setting.4.tooltip": "是否启用线圈替换模式。启用线圈替换模式会将所有线圈替换为线圈等级中指定的线圈。",
   "item.gtetscore.advanced_terminal.setting.5": "使用AE物品",
