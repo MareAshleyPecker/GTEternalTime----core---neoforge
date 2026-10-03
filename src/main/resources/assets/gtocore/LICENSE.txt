@@ -1,0 +1,73 @@
+GTOCore 贴图副本 — 来源与授权 / GTOCore texture copies — origin and license
+================================================================================
+
+本目录（src/main/resources/assets/gtocore/）下的 3144 个素材文件
+（textures/ 下 2221 个 .png + 923 个 .png.mcmeta）是 GTOCore 项目贴图的**副本**，
+随本 mod 的 jar 一起分发。副本照原样挂在 **`gtocore`** 命名空间下（不是 `gtetcore`），
+这样上游写法的 `gtocore:...` 引用无需改动即可解析 —— 这些 `.mcmeta` 里的 CTM
+`connection` 字段本身就写着 `gtocore:block/...`，改命名空间会让它们全部失效。
+
+① 来源仓库：https://github.com/GregTech-Odyssey/GTOCore-Main
+   （上游同源仓库：https://github.com/GregTech-Odyssey/GTOCore ）
+② 授权依据（实际读取的文件）：仓库根目录 `LICENSE`
+   —— 正文为「GNU LESSER GENERAL PUBLIC LICENSE / Version 3, 29 June 2007」，
+   即 **LGPL-3.0**；该仓库 `gradle.properties` 亦声明 `mod_license=LGPLv3.0`。
+   （注：`GregTech-Odyssey/GregTech-Odyssey` 那个**整合包**仓库的 `LICENSE.txt`
+   是 CC BY-NC-SA 4.0，与 mod 仓库无关，不要混用。）
+③ 授权名称：LGPL-3.0（GNU Lesser General Public License v3.0）。
+④ 副本对应版本：`GregTech-Odyssey/GTOCore` 提交
+   f1a32e4ac1e3afd3f50faa28ccebd5b83fcd0124（0.5.6-pre1）。本目录的文件清单与该提交的
+   `src/main/resources/assets/gtocore/textures/` **逐一相同**（3144/3144，路径与字节均一致）。
+⑤ 版权：归 GTOCore 作者所有（Copyright © GTOCore contributors），不是本仓库作者。
+
+分发方式与义务：
+
+- 本仓库按 **LGPL-3.0** 原样分发这批素材的副本，**未修改**任何贴图内容；
+- 再分发者**必须保留本条署名与授权说明**，并保留 LGPL-3.0 许可文本（本仓库根目录
+  `LICENSE` 即该文本）；
+- 本说明不额外放宽也不收紧上游授权；**如需商用或再分发，请自行核实上游仓库的最新授权**
+  （上游保留随时变更的权利）。
+
+已知不确定性：上游仓库内还包含若干**第三方**素材，`GregTech-Odyssey/GregTech-Odyssey`
+的 `THIRD_PARTY_LICENSES.md` 列有清单（CC0 / MIT / CC BY-NC-SA 4.0 / "Don't Be a Jerk" /
+作者单独授权等）。从文件路径无法判断本目录中是否混有那些素材，因此若上游或该清单日后
+指明本目录的某些文件另有授权，**以那份清单为准**。
+
+--------------------------------------------------------------------------------
+English
+--------------------------------------------------------------------------------
+
+The 3144 asset files in this directory (src/main/resources/assets/gtocore/, of which
+2221 .png + 923 .png.mcmeta under textures/) are **copies** of GTOCore's textures,
+shipped inside this mod's jar. They intentionally keep the upstream **`gtocore`**
+namespace (not `gtetcore`) so that existing `gtocore:...` references resolve unchanged —
+the CTM `connection` fields in these very `.mcmeta` files say `gtocore:block/...`.
+
+1. Source repository: https://github.com/GregTech-Odyssey/GTOCore-Main
+   (upstream twin: https://github.com/GregTech-Odyssey/GTOCore )
+2. License as actually read from: `LICENSE` at the repository root — the full text of the
+   "GNU LESSER GENERAL PUBLIC LICENSE, Version 3, 29 June 2007", i.e. **LGPL-3.0**.
+   That repository's `gradle.properties` also declares `mod_license=LGPLv3.0`.
+   (Note: the **modpack** repository `GregTech-Odyssey/GregTech-Odyssey` uses
+   CC BY-NC-SA 4.0 in its `LICENSE.txt`; that is a different repository — do not mix them up.)
+3. License name: LGPL-3.0 (GNU Lesser General Public License v3.0).
+4. Revision of this copy: `GregTech-Odyssey/GTOCore` commit
+   f1a32e4ac1e3afd3f50faa28ccebd5b83fcd0124 (0.5.6-pre1). This directory's file list is
+   **identical** to that commit's `src/main/resources/assets/gtocore/textures/`
+   (3144/3144, same paths and same bytes).
+5. Copyright remains with the GTOCore authors (Copyright © GTOCore contributors),
+   not with this repository's author.
+
+Redistribution:
+
+- This repository redistributes these assets **unmodified** as a copy under **LGPL-3.0**;
+- anyone redistributing them **must retain this attribution and license notice**, together
+  with the LGPL-3.0 license text (the repository root `LICENSE`);
+- this notice neither broadens nor narrows the upstream license; **for commercial use or
+  redistribution, verify the upstream repository's current license yourself**.
+
+Known uncertainty: the upstream repositories also bundle **third-party** assets, listed in
+`THIRD_PARTY_LICENSES.md` of `GregTech-Odyssey/GregTech-Odyssey`
+(CC0 / MIT / CC BY-NC-SA 4.0 / "Don't Be a Jerk" / per-author permission, etc.). File paths
+alone cannot tell whether any of those are present in this directory, so if upstream or that
+list later identifies specific files here as separately licensed, **that list governs**.

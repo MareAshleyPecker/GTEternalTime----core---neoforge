@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "gtetcore:block/machine/overclock_hatch_64x_lossy4",
+      "x": 90
+    },
+    "facing=east": {
+      "model": "gtetcore:block/machine/overclock_hatch_64x_lossy4",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "gtetcore:block/machine/overclock_hatch_64x_lossy4"
+    },
+    "facing=south": {
+      "model": "gtetcore:block/machine/overclock_hatch_64x_lossy4",
+      "y": 180
+    },
+    "facing=up": {
+      "gtceu:z": 180,
+      "model": "gtetcore:block/machine/overclock_hatch_64x_lossy4",
+      "x": 270
+    },
+    "facing=west": {
+      "model": "gtetcore:block/machine/overclock_hatch_64x_lossy4",
+      "y": 270
+    }
+  }
+}

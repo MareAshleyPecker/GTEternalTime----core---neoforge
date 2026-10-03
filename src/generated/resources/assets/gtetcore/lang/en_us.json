@@ -1,0 +1,23 @@
+{
+  "block.gtetcore.overclock_hatch_1024x_saving_max": "MAX Overclock Hatch (1024x Speed / x256 Energy)",
+  "block.gtetcore.overclock_hatch_16x_lossy2": "UHV Overclock Hatch (16x Speed / x64 Energy)",
+  "block.gtetcore.overclock_hatch_16x_lossy4": "UV Overclock Hatch (16x Speed / x128 Energy)",
+  "block.gtetcore.overclock_hatch_16x_perfect": "UEV Overclock Hatch (16x Speed / x32 Energy)",
+  "block.gtetcore.overclock_hatch_16x_saving": "UIV Overclock Hatch (16x Speed / x16 Energy)",
+  "block.gtetcore.overclock_hatch_256x_lossy2": "UIV Overclock Hatch (256x Speed / x512 Energy)",
+  "block.gtetcore.overclock_hatch_256x_lossy4": "UEV Overclock Hatch (256x Speed / x1024 Energy)",
+  "block.gtetcore.overclock_hatch_256x_perfect": "UXV Overclock Hatch (256x Speed / x256 Energy)",
+  "block.gtetcore.overclock_hatch_256x_saving": "OpV Overclock Hatch (256x Speed / x128 Energy)",
+  "block.gtetcore.overclock_hatch_4x_lossy2": "UV Overclock Hatch (4x Speed / x16 Energy)",
+  "block.gtetcore.overclock_hatch_4x_lossy4": "ZPM Overclock Hatch (4x Speed / x32 Energy)",
+  "block.gtetcore.overclock_hatch_4x_perfect": "UHV Overclock Hatch (4x Speed / x8 Energy)",
+  "block.gtetcore.overclock_hatch_4x_saving": "UEV Overclock Hatch (4x Speed / x4 Energy)",
+  "block.gtetcore.overclock_hatch_64x_lossy2": "UEV Overclock Hatch (64x Speed / x256 Energy)",
+  "block.gtetcore.overclock_hatch_64x_lossy4": "UHV Overclock Hatch (64x Speed / x512 Energy)",
+  "block.gtetcore.overclock_hatch_64x_perfect": "UIV Overclock Hatch (64x Speed / x128 Energy)",
+  "block.gtetcore.overclock_hatch_64x_saving": "UXV Overclock Hatch (64x Speed / x64 Energy)",
+  "block.gtetcore.parallel_hatch_iv": "IV Parallel Hatch (32 Parallel)",
+  "block.gtetcore.test_sync_part": "Test Sync Part",
+  "gtetcore.machine.overclock_hatch_1024x_saving_max.tooltip.0": "so goooooood~",
+  "gtetcore.machine.overclock_hatch_4x_lossy4.tooltip.0": "Looks pretty useless"
+}

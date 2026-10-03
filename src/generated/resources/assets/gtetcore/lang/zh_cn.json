@@ -1,0 +1,22 @@
+{
+  "block.gtetcore.overclock_hatch_1024x_saving_max": "MAX 超频仓（1024× Speed|×256 Energy）",
+  "block.gtetcore.overclock_hatch_16x_lossy2": "UHV 超频仓（16× Speed|×64 Energy）",
+  "block.gtetcore.overclock_hatch_16x_lossy4": "UV 超频仓（16× Speed|×128 Energy）",
+  "block.gtetcore.overclock_hatch_16x_perfect": "UEV 超频仓（16× Speed|×32 Energy）",
+  "block.gtetcore.overclock_hatch_16x_saving": "UIV 超频仓（16× Speed|×16 Energy）",
+  "block.gtetcore.overclock_hatch_256x_lossy2": "UIV 超频仓（256× Speed|×512 Energy）",
+  "block.gtetcore.overclock_hatch_256x_lossy4": "UEV 超频仓（256× Speed|×1024 Energy）",
+  "block.gtetcore.overclock_hatch_256x_perfect": "UXV 超频仓（256× Speed|×256 Energy）",
+  "block.gtetcore.overclock_hatch_256x_saving": "OpV 超频仓（256× Speed|×128 Energy）",
+  "block.gtetcore.overclock_hatch_4x_lossy2": "UV 超频仓（4× Speed|×16 Energy）",
+  "block.gtetcore.overclock_hatch_4x_lossy4": "ZPM 超频仓（4× Speed|×32 Energy）",
+  "block.gtetcore.overclock_hatch_4x_perfect": "UHV 超频仓（4× Speed|×8 Energy）",
+  "block.gtetcore.overclock_hatch_4x_saving": "UEV 超频仓（4× Speed|×4 Energy）",
+  "block.gtetcore.overclock_hatch_64x_lossy2": "UEV 超频仓（64× Speed|×256 Energy）",
+  "block.gtetcore.overclock_hatch_64x_lossy4": "UHV 超频仓（64× Speed|×512 Energy）",
+  "block.gtetcore.overclock_hatch_64x_perfect": "UIV 超频仓（64× Speed|×128 Energy）",
+  "block.gtetcore.overclock_hatch_64x_saving": "UXV 超频仓（64× Speed|×64 Energy）",
+  "block.gtetcore.parallel_hatch_iv": "IV 并行仓（32 并行）",
+  "gtetcore.machine.overclock_hatch_1024x_saving_max.tooltip.0": "so good~",
+  "gtetcore.machine.overclock_hatch_4x_lossy4.tooltip.0": "看起来并不好用"
+}

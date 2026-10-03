@@ -1,0 +1,227 @@
+# GTM 1.21.1 / NeoForge 问题记录
+
+记录移植 GTET 到 **1.21.1 + NeoForge** 过程中，实际踩到的 **GTM（GTCEu 8.0.0-SNAPSHOT）及其依赖（MUI 等）自身的问题**。
+每条固定格式：**一句话** → **来源**（原始报错原文，可直接在日志里搜）→ **触发** → **处理/状态**。
+
+环境基线（换版本时整份文档都要重新复核）：
+
+| 项 | 版本 |
+|---|---|
+| Minecraft / NeoForge | 1.21.1 / 21.1.252 |
+| GTCEu（GTM） | 8.0.0-SNAPSHOT（`libs/gtceu-1.21.1-8.0.0-SNAPSHOT.jar`） |
+| MUI | `brachy.modularui:modularui-mc1.21.1:3.3.1-SNAPSHOT`（gtceu jarJar 携带） |
+| Registrate | `com.tterrag.registrate:Registrate:MC1.21-1.3.0+67`（gtceu jarJar 携带） |
+| Kotlin for Forge | 5.7.0 |
+
+添加新条目：照最后面的模板追加，编号递增；**能定位到上游代码的写清类名与行号**，能给出原始报错原文的一律原文贴上。
+
+---
+
+## 1. MUI 调试覆盖层：点按钮直接崩客户端（严重度：高 · 状态：已修，上游未修）
+
+**一句话**：MUI 调试覆盖层的「Print Theme json」勾上后，点任意按钮都会因主题 JSON 编码器不判空而崩客户端。
+
+**来源**：
+
+```
+Caused by: java.lang.NullPointerException: Cannot invoke "brachy.modularui.api.ITheme.getId()" because the return value of "brachy.modularui.api.ITheme.getParentTheme()" is null
+	at brachy.modularui.api.ITheme$1.encode(ITheme.java:32)
+	at brachy.modularui.overlay.DebugOverlay.logTheme(DebugOverlay.java:154)
+	at brachy.modularui.widgets.ButtonWidget.onMousePressed(ButtonWidget.java:72)
+```
+
+**触发**：调试覆盖层里勾选「Print Theme json」（它在 MUI 的 dev 配置项里），然后点面板上任何按钮。
+
+**成因**：`ITheme$1.encode` 无条件执行 `getParentTheme().getId()`；**根主题没有父主题**，于是 NPE，异常从 NeoForge 事件总线抛出 → 客户端崩溃（`run/crash-reports/crash-2026-10-03_15.57.39-client.txt`）。字节码里就是 offset 36/41 两句连着：
+
+```
+36: invokeinterface ITheme.getParentTheme()
+41: invokeinterface ITheme.getId()
+```
+
+**处理**：本工程 `src/main/java/rain/fox/gtetcore/mixin/modularui/debug/IThemeEncoderMixin.java` 用 `@Redirect` 把第二个 `ITheme#getId()`（`ordinal = 1`）改成判空，父主题为空写 `"null"`。临时规避＝关掉那个调试选项。
+
+---
+
+## 2. 数据生成报「GTM 的父模型不存在」其实是 NeoForge 的参数问题（严重度：高 · 状态：已修）
+
+**一句话**：`runData` 报 gtceu 的父模型不存在，看着像 GTM 缺资源，真因是 NeoForge 1.21 的数据生成只认识 `--existing` 目录和 `--existing-mod` 点名的模组资源。
+
+**来源**：
+
+```
+Caused by: java.lang.IllegalStateException: Model at gtceu:block/machine/template/part/hatch_machine_color_ring does not exist
+	at com.gregtechceu.gtceu.data.model.builder.MachineModelBuilder.forAllStatesExcept(MachineModelBuilder.java:325)
+Caused by: java.lang.RuntimeException: Unexpected error while running data generator of type null for entry test_sync_part [minecraft:block]
+```
+
+**触发**：addon 的机器模型拿 GTM 的模板模型当父模型时必现（我们这个文件确实在 jar 里，只是数据生成看不到）。
+
+**成因**：`net.neoforged.neoforge.data.loading.DatagenModLoader#begin` 构造 `new ExistingFileHelper(existingPacks, existingMods, ...)`，两个入参分别来自命令行 `--existing <目录>` 与 `--existing-mod <modid>`（由 NeoForge 打在 `net.minecraft.data.Main` 上）。1.20.1 的 Forge 会自动带上模组资源，所以老工程不需要这个参数。
+
+**处理**：`build.gradle` 的 data run 加 `programArguments.addAll '--existing-mod', 'gtceu'`。
+
+---
+
+## 3. GTM 的 EMI / JEI mixin 在没装那两个 mod 时刷一批警告（严重度：低 · 状态：忽略）
+
+**一句话**：GTM 的 mixin 配置没有做「目标 mod 存在才加载」的判定，没装 EMI/JEI 时会刷 10 行类找不到的警告。
+
+**来源**：
+
+```
+@Mixin target dev.emi.emi.api.EmiApi was not found gtceu.mixins.json:emi.EmiApiAccessor from mod gtceu
+@Mixin target mezz.jei.gui.recipes.RecipesGui was not found gtceu.mixins.json:jei.RecipesGuiAccessor from mod gtceu
+Error loading class: dev/emi/emi/api/EmiApi (java.lang.ClassNotFoundException: dev.emi.emi.api.EmiApi)
+Error loading class: mezz/jei/neoforge/platform/FluidHelper (java.lang.ClassNotFoundException: mezz.jei.neoforge.platform.FluidHelper)
+```
+
+**触发**：开发环境没把 EMI / JEI 放进运行时依赖。
+
+**处理**：忽略（装了就消失）。**排查其它问题时注意别被这批警告带偏**。
+
+---
+
+## 4. GTM 音效缺字幕翻译，客户端刷一批 ERROR（严重度：低 · 状态：忽略，上游问题）
+
+**一句话**：GTM 自己漏了音效字幕的语言键，开字幕时每条音效打一条 ERROR。
+
+**来源**：
+
+```
+Missing subtitle translation{key='subtitle.gtceu.boiler', args=[]} for sound event: gtceu:boiler
+Missing subtitle translation{key='subtitle.gtceu.assembler', args=[]} for sound event: gtceu:assembler
+```
+
+（`boiler` / `assembler` / `arc` / `bath` / `centrifuge` / `chainsaw` / `chemical` / `combustion` / `compressor` / `computation` / `cooling` / `cut` … 一大批）
+
+**处理**：忽略。游戏内只有开启字幕后才会看到。
+
+---
+
+## 5. MUI 自带测试物品缺模型（严重度：低 · 状态：忽略）
+
+**一句话**：MUI 自己的测试物品没有模型文件，客户端加载模型时刷一条警告。
+
+**来源**：
+
+```
+Unable to load model: 'modularui:item/test_item' referenced from: modularui:item/
+```
+
+**处理**：忽略（上游问题，纯日志噪音）。
+
+---
+
+## 6. JarJar 报「选到两个相同标识的嵌套 mod」（严重度：低 · 状态：待观察）
+
+**一句话**：gtceu 以文件依赖同时进了编译期和运行期，而它自身又是 jarJar 载体，选择器会抱怨同一嵌套 mod 被选中两次。
+
+**来源**：
+
+```
+[net.neoforged.jarjar.selection.JarSelector/]: Attempted to select two dependency jars from JarJar which have the same identification: Nested Mod File  in Mod File: ...
+```
+
+**处理**：目前无害（运行正常）。若以后 gtceu 能走 maven 依赖（`implementation`），这条会自动消失。
+
+---
+
+## 7. 开发环境的 refmap 警告（严重度：低 · 状态：忽略，但发布前必须复核）
+
+**一句话**：GTM / MUI / configuration（以及我们自己的 mixin 配置）在开发环境读不到 refmap，属预期，Release 构建才是真问题。
+
+**来源**：
+
+```
+Reference map 'gtceu.refmap.json' for gtceu.mixins.json could not be read. If this is a development environment you can ignore this message
+Reference map 'modularui.refmap.json' for modularui.mixins.json could not be read. If this is a development environment you can ignore this message
+```
+
+**处理**：忽略；打正式包前确认生产环境的 mixin 映射正常。
+
+---
+
+## 8. GTM 流体存储键重复登记警告（严重度：低 · 状态：忽略，上游问题）
+
+**一句话**：GTM 注册流体时对同一 material 重复挂 FluidStorageKey，刷三条警告。
+
+**来源**：
+
+```
+[GTCEu/]: FluidStorageKey{...} already has an associated fluid for material gtceu:lava
+[GTCEu/]: FluidStorageKey{...} already has an associated fluid for material gtceu:milk
+[GTCEu/]: FluidStorageKey{...} already has an associated fluid for material gtceu:water
+```
+
+**处理**：忽略。1.21.1 的 GTM 是 SNAPSHOT，这类自检警告会陆续出现，注意区分「上游自检噪音」与「真的加载失败」。
+
+---
+
+## 9. MUI 调试覆盖层会自动挂在每个界面上，且没有显眼的关闭方式（严重度：中 · 状态：已定位，有热键规避）
+
+**一句话**：`[dev] debugUI = true` 时，MUI 每开一个界面都会自动叠一层调试面板（Debug Options + 左下角调试信息），界面因此显得「收不回去」。
+
+**来源**（字节码，`OverlayStack.onOpenScreen`）：
+
+```
+67: invokestatic  // ModularUIConfig$Dev.debugUI:()Z
+70: ifeq 103
+73: aload_0
+74: instanceof    // brachy/modularui/api/IMuiScreen
+85: new           // class brachy/modularui/overlay/DebugOverlay
+90: invokespecial // DebugOverlay."<init>":(Lbrachy/modularui/api/IMuiScreen;)V
+```
+
+配置项（`run/config/modularui.toml`，**默认 false**，我们这份被打开了）：
+
+```toml
+[dev]
+	#Debug UI? (Will draw widget outlines and widget information)
+	#Default: false
+	debugUI = true
+```
+
+**触发**：开着 `dev.debugUI` 时打开任何 MUI 界面。
+
+**处理**：
+- **热键直接翻开关：`Ctrl + Shift + Alt + C`**（开着界面时按）。字节码里就是 `keyTyped` 判 `keyCode == 67('C') && ctrl && shift && alt` → `DEBUG_UI.set(!debugUI())`。
+- 或者直接把 `run/config/modularui.toml` 的 `[dev] debugUI` 改回 `false`。
+- 关掉之后界面就能正常用 ESC 关闭了。**若仍关不掉**，先在面板空白处点一下（把焦点从数字输入框移开）再按 ESC——MUI 的文本框会吃掉第一次 ESC（见配置项 `[ui] escRestoresLastText` 的说明）。
+
+**顺带**：同一份配置里 `[ui] enableTestGuis = true`（默认就是 true）会给 MUI 注册它的测试方块/测试物品，第 5 条那条缺模型警告就是它带来的。
+
+---
+
+## 附录：不是 bug，但会让老代码编不过（API 变更，详见项目笔记）
+
+| 1.20.1 写法 | 8.0.0 现状 |
+|---|---|
+| `implements IParallelHatch` | 接口已删；控制器用 `part instanceof ParallelHatchPartMachine` 识别，必须继承 GTM 那个类 |
+| `canShared()` | `canShared(MultiblockControllerMachine, String substructureName)` |
+| `api.machine.trait.RecipeLogic` | `api.machine.trait.recipe.RecipeLogic` |
+| `IFancyUIMachine#createUIWidget()`（LDLib 控件） | `IMuiMachine#buildMainUI(...)`（MUI） |
+| `@Persisted` / `@DescSynced` / `MANAGED_FIELD_HOLDER` | `@field:SaveField` / `@field:SyncToClient` / 持有者全删 |
+| `saveCustomPersistedData` / `loadCustomPersistedData` | `saveAdditional` 是 final；改 `@SaveField` 字段；读档覆写 `loadAdditional`（在 super 之前） |
+
+---
+
+## 模板（新增条目时复制）
+
+```markdown
+## N. 标题（严重度：高/中/低 · 状态：已修/规避中/忽略/待观察）
+
+**一句话**：
+
+**来源**：
+
+```
+（原始报错原文，含 Caused by 那几行）
+```
+
+**触发**：
+
+**成因**：
+
+**处理**：
+```

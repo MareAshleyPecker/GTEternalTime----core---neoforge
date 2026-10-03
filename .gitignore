@@ -1,0 +1,25 @@
+# Gradle
+.gradle
+build
+.kotlin
+
+# IDE
+.idea
+*.iml
+out/
+
+# 运行目录（含测试世界、日志）
+run
+run-data
+
+# 第三方 jar 不入库：
+#   gtceu 的 jar 自行从 CurseForge / Modrinth 取来放进 libs/
+#   libs/jarjar/ 那三个内嵌库（Registrate / MUI / configuration）跑 gradlew extractGtceuJarJar 自动抽出
+libs/*.jar
+libs/jarjar/
+
+# 杂项
+*.log
+runtmp-*.log
+hs_err_pid*
+replay_pid*.log

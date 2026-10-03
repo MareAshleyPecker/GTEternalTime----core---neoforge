@@ -1,0 +1,39 @@
+{
+  "parent": "minecraft:block/block",
+  "loader": "gtceu:machine",
+  "machine": "gtetcore:overclock_hatch_256x_lossy2",
+  "variants": {
+    "recipe_logic_status=idle": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uiv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/overclock_hatch/overclock_hatch_mk4/overlay_front"
+        }
+      }
+    },
+    "recipe_logic_status=suspend": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uiv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/overclock_hatch/overclock_hatch_mk4/overlay_front"
+        }
+      }
+    },
+    "recipe_logic_status=waiting": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uiv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/overclock_hatch/overclock_hatch_mk4/overlay_front"
+        }
+      }
+    },
+    "recipe_logic_status=working": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uiv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/overclock_hatch/overclock_hatch_mk4/overlay_front"
+        }
+      }
+    }
+  }
+}
