@@ -4,6 +4,7 @@
   "package": "rain.fox.gtetcore.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "gtm.MachineUIPanelBuilderMixin"
   ],
   "client": [
     "modularui.debug.IThemeEncoderMixin"
