@@ -22,6 +22,7 @@ import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.data.lang.TimeFlowHatchLang
 import rain.fox.gtetcore.data.lang.ThreadHatchLang
+import rain.fox.gtetcore.data.lang.TestMultiblockLang
 import rain.fox.gtetcore.data.lang.WirelessEnergyHatchLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
 import rain.fox.gtetcore.data.recipe.ETRecipeProvider
@@ -95,6 +96,7 @@ class CommonProxy {
         @Suppress("UNUSED_EXPRESSION") TestMachines.test_sync_part
         @Suppress("UNUSED_EXPRESSION") ETMachines.parallel_hatch_iv
         @Suppress("UNUSED_EXPRESSION") ETMachines.MASTER_TOWER
+        @Suppress("UNUSED_EXPRESSION") ETMachines.TEST_MULTIBLOCK
         @Suppress("UNUSED_EXPRESSION") ETItems.ADVANCED_TERMINAL
         @Suppress("UNUSED_EXPRESSION") ETItems.CLOCK_OF_TIME_SEQUENCE
         initLang()
@@ -129,6 +131,8 @@ class CommonProxy {
         WirelessEnergyHatchLang.register()
         // 线程仓：仓本身的提示 + 多线程状态的整机/分组显示文案（机器面板与 Jade 共用）
         ThreadHatchLang.register()
+        // 多方块测试机：机器名（中文）+ tooltip 两行
+        TestMultiblockLang.register()
         // 机器 3D 输入输出配置页
         MachineIoConfigLang.register()
         // 多方块 3D 预览的全屏 / 退出 / 重置视角按钮

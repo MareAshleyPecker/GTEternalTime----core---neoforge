@@ -15,6 +15,7 @@ import rain.fox.gtetcore.common.data.machine.hatch.ETThreadHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETTimeFlowHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETWirelessEnergyHatches
 import rain.fox.gtetcore.common.data.machine.multiblock.ETMasterTower
+import rain.fox.gtetcore.common.data.machine.multiblock.ETTestMultiblocks
 import rain.fox.gtetcore.common.machine.multiblock.part.ETParallelHatchPartMachine
 import rain.fox.gtetcore.util.ETPartSharing
 import rain.fox.gtetcore.util.lang.LangUtil
@@ -130,4 +131,14 @@ object ETMachines {
     @JvmField
     val MASTER_TOWER: MachineEntry<MultiblockMachineDefinition> =
         ETMasterTower.register(ETRegistrate.REGISTRATE)
+
+    /**
+     * **多方块测试机**：线程内核的第一台消费机器（3×3×3 钢机壳，只吃研磨配方）。
+     *
+     * ⚠️ 本行必须排在 [THREAD_HATCHES] **之后**（理由同 [MASTER_TOWER]：`PartAbility#getAllBlocks()`
+     * 懒记忆化，而本机的结构谓词用的正是 `ETPartAbility.THREAD_HATCH`）。
+     */
+    @JvmField
+    val TEST_MULTIBLOCK: MachineEntry<MultiblockMachineDefinition> =
+        ETTestMultiblocks.register(ETRegistrate.REGISTRATE)
 }
