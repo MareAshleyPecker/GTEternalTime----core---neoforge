@@ -7,13 +7,17 @@ import com.gregtechceu.gtceu.api.addon.IGTAddon
 import com.gregtechceu.gtceu.api.registry.GTRegistries
 import com.gregtechceu.gtceu.api.registry.registrate.GTRegistrate
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
 import net.minecraft.data.recipes.RecipeOutput
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.CreativeModeTab
+import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent
 import org.apache.logging.log4j.Level
 import rain.fox.gtetcore.api.timeflow.ETTimeFlowCapability
+import rain.fox.gtetcore.common.data.machine.hatch.ETTimeFlowHatches
+import rain.fox.gtetcore.registry.ETCreativeModeTabs
 import rain.fox.gtetcore.registry.ETMachines
 import rain.fox.gtetcore.registry.ETRegistrate
 import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
@@ -135,9 +139,55 @@ class ETGTAddon : IGTAddon {
             checkAddonDiscovered()
             checkMachinesRegistered()
             checkTimeFlowCapabilityRegistered()
+            checkCreativeTabs()
             // TODO(材料切片): checkElementsRegistered()
             //   等 ETElements 移植过来，查 GTRegistries.ELEMENTS。
             // TODO(并行仓切片): hideGtmParallelHatchesFromCreativeTabs()
+        }
+
+        /**
+         * 自检 ④：**创造页归页**（先打日志、再 `check`，理由同上面两条）。
+         *
+         * 这条治的是「机器注册成功、页里一件都找不到、还不报错」：`TAB_LOOKUP` 按对象身份比对，
+         * 写错对象或写晚一步都是静默失效（见 [rain.fox.gtetcore.registry.ETMachines] 顶部）。
+         */
+        private fun checkCreativeTabs() {
+            check(logCreativeTabCounts()) {
+                "GTET 的时序仓没有全部归进创造页 ${ETCreativeModeTabs.MACHINE.id} —— " +
+                    "说明注册期设的 `creativeModeTab(...)` 被人复位成了 null。"
+            }
+        }
+
+        /**
+         * 打两行归页实况（每页几件 / 6 个时序仓各自是否命中机器页），返回是否全部命中。
+         *
+         * 抽成公开方法是为了能在**不启动游戏**的地方复用：`runData` 也走完整的注册事件，
+         * 在 `GatherDataEvent` 里临时调一次就能验归页。
+         */
+        @JvmStatic
+        fun logCreativeTabCounts(): Boolean {
+            val registrate = ETRegistrate.REGISTRATE
+            val items = registrate.getAll<Item, Item>(Registries.ITEM)
+            val perTab = ETCreativeModeTabs.all().joinToString(" ") { tab ->
+                "${tab.id.path}=${items.count { item -> registrate.isInCreativeTab(item, tab) }}"
+            }
+            GTETSCore.LOGGER.log(
+                Level.INFO,
+                "[GTET] 创造页自检：{}（本 registrate 的 ITEM 条目共 {} 件）",
+                perTab, items.size,
+            )
+
+            val machineTab = ETCreativeModeTabs.MACHINE
+            val hatchLines = mutableListOf<String>()
+            var allHatchesListed = true
+            for (variant in ETTimeFlowHatches.VARIANTS) {
+                val entry = registrate.getOptional<Item, Item>(variant.id, Registries.ITEM).orElse(null)
+                val inTab = entry != null && registrate.isInCreativeTab(entry, machineTab)
+                if (!inTab) allHatchesListed = false
+                hatchLines.add("${variant.id}=$inTab")
+            }
+            GTETSCore.LOGGER.log(Level.INFO, "[GTET] 时序仓归页自检：{}", hatchLines.joinToString(" "))
+            return allHatchesListed
         }
 
         /**
@@ -168,18 +218,19 @@ class ETGTAddon : IGTAddon {
          * 此刻机器表已经冻结，留下什么就是什么 —— 真没注册上就直接崩，别等进游戏才发现机器没了。
          */
         private fun checkMachinesRegistered() {
-            // 只读 DeferredHolder 的 id（普通字段），**不读**它的值：注册表外的取值会抛异常
-            val machineId = ETMachines.parallel_hatch_iv.id
-            val registered = GTRegistries.MACHINES.containsKey(machineId)
-            GTETSCore.LOGGER.log(
-                Level.INFO,
-                "[GTET] 机器注册自检：{} → {}",
-                machineId,
-                if (registered) "registered" else "MISSING",
-            )
-            check(registered) {
-                "GTET 的机器没有注册进 GTRegistries.MACHINES：$machineId。" +
-                    "注册入口是 ETMachines（CommonProxy.kotlinInit 里那次取值负责触发类加载）。"
+            for (machineId in listOf(ETMachines.parallel_hatch_iv.id, ETMachines.MASTER_TOWER.id)) {
+                // 只读 DeferredHolder 的 id（普通字段），**不读**它的值：注册表外的取值会抛异常
+                val registered = GTRegistries.MACHINES.containsKey(machineId)
+                GTETSCore.LOGGER.log(
+                    Level.INFO,
+                    "[GTET] 机器注册自检：{} → {}",
+                    machineId,
+                    if (registered) "registered" else "MISSING",
+                )
+                check(registered) {
+                    "GTET 的机器没有注册进 GTRegistries.MACHINES：$machineId。" +
+                        "注册入口是 ETMachines（CommonProxy.kotlinInit 里那次取值负责触发类加载）。"
+                }
             }
         }
 

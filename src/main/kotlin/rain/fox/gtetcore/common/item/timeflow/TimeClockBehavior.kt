@@ -136,9 +136,7 @@ object TimeClockBehavior : IAddInformation, IInteractionItem {
      * 右键的那一格**不是**主控塔时返回 `PASS`：什么都不做，右键交还给方块本身（不给错误提示，
      * 免得玩家在自己家墙上右键一下就弹红字）。
      *
-     * TODO(主塔切片)：**本条路径现在是空转的** —— [TimeFlowTowers.find] 还没有任何机器实现
-     *  `ITimeFlowTower`，所以恒定返回 `null`、[towerGesture] 每次都走 `PASS` 分支。
-     *  主塔机器落地、实现 `ITimeFlowTower` 之后，这里**一行都不用改**就会自动生效。
+     * 主控塔（`MasterTowerMachine`）实现 `ITimeFlowTower` 之后，[TimeFlowTowers.find] 就能查到它。
      */
     override fun onItemUseFirst(itemStack: ItemStack, context: UseOnContext): InteractionResult =
         towerGesture(context)

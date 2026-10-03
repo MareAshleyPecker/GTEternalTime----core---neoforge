@@ -12,8 +12,11 @@ import rain.fox.gtetcore.ETGTAddon
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.api.timeflow.ETTimeFlowCapability
 import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
+import rain.fox.gtetcore.common.machine.multiblock.timeflow.MasterTowerRegistry
 import rain.fox.gtetcore.config.GtetConfig
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
+import rain.fox.gtetcore.data.lang.MachineIoConfigLang
+import rain.fox.gtetcore.data.lang.MasterTowerLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.data.lang.TimeFlowHatchLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
@@ -87,6 +90,7 @@ class CommonProxy {
         //    读它会抛 `IllegalStateException: Registry not present for DeferredHolder{... gtceu:machine}`。
         @Suppress("UNUSED_EXPRESSION") TestMachines.test_sync_part
         @Suppress("UNUSED_EXPRESSION") ETMachines.parallel_hatch_iv
+        @Suppress("UNUSED_EXPRESSION") ETMachines.MASTER_TOWER
         @Suppress("UNUSED_EXPRESSION") ETItems.ADVANCED_TERMINAL
         @Suppress("UNUSED_EXPRESSION") ETItems.CLOCK_OF_TIME_SEQUENCE
         initLang()
@@ -100,6 +104,11 @@ class CommonProxy {
         // 高级终端静态组预置：GAME 总线的手工注册。
         // ⚠️ 刻意不写成带 `@EventBusSubscriber` 的 Kotlin object —— 原因见类注释。
         NeoForge.EVENT_BUS.addListener(TerminalGroupSeeder::onPlayerTick)
+
+        // 主控塔记账的服务器生命周期：起来时读进内存、停下时清掉（`MasterTowerRegistry` 的 @JvmStatic 回调）。
+        // ⚠️ 改不了 `@EventBusSubscriber`（见类注释），所以在这里手工挂 GAME 总线。
+        NeoForge.EVENT_BUS.addListener(MasterTowerRegistry::onServerStarted)
+        NeoForge.EVENT_BUS.addListener(MasterTowerRegistry::onServerStopping)
     }
 
     private fun initLang(){
@@ -110,6 +119,10 @@ class CommonProxy {
         // 时序仓的语言键：含 **配方能力名** `recipe_capability.gtetscore.time_flow`
         // （TF 不足时报错文案用的就是它，GTM 不会替 addon 能力补这条翻译）
         TimeFlowHatchLang.register()
+        // 主控塔：tooltip 三行 + 面板里的储备 / 容量 / 汇率 / 所有者
+        MasterTowerLang.register()
+        // 机器 3D 输入输出配置页
+        MachineIoConfigLang.register()
     }
 
     /**

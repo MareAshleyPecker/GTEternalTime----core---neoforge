@@ -4,6 +4,7 @@ import com.gregtechceu.gtceu.GTCEu
 import com.gregtechceu.gtceu.api.GTValues
 import com.gregtechceu.gtceu.api.data.RotationState
 import com.gregtechceu.gtceu.api.machine.MachineDefinition
+import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility
 import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties
 import com.gregtechceu.gtceu.api.machine.trait.recipe.RecipeLogic
@@ -11,6 +12,7 @@ import com.gregtechceu.gtceu.api.registry.registrate.entry.MachineEntry
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels.createWorkableTieredHullMachineModel
 import rain.fox.gtetcore.common.data.machine.hatch.ETOverclockHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETTimeFlowHatches
+import rain.fox.gtetcore.common.data.machine.multiblock.ETMasterTower
 import rain.fox.gtetcore.common.machine.multiblock.part.ETParallelHatchPartMachine
 import rain.fox.gtetcore.util.ETPartSharing
 import rain.fox.gtetcore.util.lang.LangUtil
@@ -18,14 +20,30 @@ import rain.fox.gtetcore.util.lang.LangUtil
 /**
  * GTET 机器注册入口。
  *
- * 目前登记三类：**并行仓**（IV 一档，验证注册 / 存档 / MUI 面板 / C2S 同步四条链路）、
- * **超频仓**（17 档，见 [ETOverclockHatches]）、**时序仓**（6 档，见 [ETTimeFlowHatches]）。
+ * 目前登记四类：**并行仓**（IV 一档，验证注册 / 存档 / MUI 面板 / C2S 同步四条链路）、
+ * **超频仓**（17 档，见 [ETOverclockHatches]）、**时序仓**（6 档，见 [ETTimeFlowHatches]）、
+ * **主控塔**（本工程第一台多方块控制器，见 [ETMasterTower]）。
  * 老项目的完整并行仓变体表（IV 32 / LuV 128 / ZPM 512 / UV 2048 / UHV 8192 / UEV 32768 /
  * UIV 524288 / UXV 2097152 / OpV 8388608 / MAX 33554432）等支撑类补齐后再上。
  *
  * 中文名走 `LangUtil.BLOCK_LANG` → `ZhCnLangProvider`（英文名走下面的 `langValue`）。
  */
 object ETMachines {
+
+    /**
+     * 归页：本 object 里注册的机器**全部**落进 `ETCreativeModeTabs.MACHINE`，**设一次、不复位**。
+     *
+     * ⚠️ 不能用 `inTab { }` 包住注册语句：机器的物品条目要等 `RegisterEvent` 派发时由
+     * `MachineBuilder.createEntry()` → `createAdditionalObjects()` 才建出来（`MachineBuilder.java:637-672`），
+     * 而 `GTRegistrate.accept()` 写 `TAB_LOOKUP` 用的是**那一刻**的 `currentTab`（`GTRegistrate.java:332-343`）、
+     * 创造页生成器只认这份表（`GTCreativeModeTabs.java:95-97`）—— `inTab` 一复位成 null 就再也进不了页。
+     * GTM 自己也是这么干的（`GTMachines` 静态块设一次 `creativeModeTab(...)`）。
+     *
+     * ⚠️ 副作用：`RegisterEvent` 里条目创建是哈希序，**给不同机器分不同页做不到** —— 机器只能共用一个页。
+     */
+    init {
+        ETRegistrate.REGISTRATE.creativeModeTab(ETCreativeModeTabs.MACHINE)
+    }
 
     /** IV 并行仓（32 并行）。贴图沿用 GTM 的并行仓 mk4，与老项目一样是临时占位。 */
     @JvmField
@@ -83,13 +101,13 @@ object ETMachines {
     val TIME_FLOW_HATCHES: List<MachineEntry<MachineDefinition>> =
         ETTimeFlowHatches.register(ETRegistrate.REGISTRATE)
 
-    init {
-        // 归页：并行仓 / 超频仓 / 时序仓 / 线程仓全部进 GTET 机器页。
-        // ⚠️ 这里必须用 assignTab 补页而不是在注册前设「当前页」——几张表都是在上面登记的，
-        //    时机已经过了；assignTab 内部会取回 ITEM 注册表那份条目再登记（原因见它的注释）。
-        ETRegistrate.REGISTRATE.assignTab(
-            ETCreativeModeTabs.MACHINE,
-            PARALLEL_HATCHES + OVERCLOCK_HATCHES + TIME_FLOW_HATCHES + THREAD_HATCHES,
-        )
-    }
+    /**
+     * **主控塔**（本工程第一台多方块控制器）。
+     *
+     * ⚠️ 本行必须排在 [TIME_FLOW_HATCHES] **之后**（理由同上：`PartAbility#getAllBlocks()` 是懒记忆化的，
+     * 将来塔的结构图案一旦用到 `ETPartAbility.TF_HATCH`，就必须在时序仓登记完之后才构造谓词）。
+     */
+    @JvmField
+    val MASTER_TOWER: MachineEntry<MultiblockMachineDefinition> =
+        ETMasterTower.register(ETRegistrate.REGISTRATE)
 }

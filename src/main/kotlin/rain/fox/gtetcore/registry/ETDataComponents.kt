@@ -1,7 +1,9 @@
 package rain.fox.gtetcore.registry
 
+import com.mojang.serialization.Codec
 import net.minecraft.core.component.DataComponentType
 import net.minecraft.core.registries.Registries
+import net.minecraft.network.codec.ByteBufCodecs
 import net.neoforged.neoforge.registries.DeferredHolder
 import net.neoforged.neoforge.registries.DeferredRegister
 import rain.fox.gtetcore.GTETSCore
@@ -55,6 +57,20 @@ object ETDataComponents {
             DataComponentType.builder<TimeClockState>()
                 .persistent(TimeClockState.CODEC)
                 .networkSynchronized(TimeClockState.STREAM_CODEC)
+                .build()
+        })
+
+    /**
+     * 主控塔被敲掉时封存进掉落物的 TF 储备（塔芯）；`MetaMachine#collectImplicitComponents` 写、
+     * `applyImplicitComponents` 读（`MetaMachineBlock.java:252` 的 `saveToItem` 是入口）。
+     * 必须 `networkSynchronized` —— 掉落物 tooltip 在客户端渲染。
+     */
+    @JvmField
+    val MASTER_TOWER_RESERVE: DeferredHolder<DataComponentType<*>, DataComponentType<Long>> =
+        REGISTRY.register("master_tower_reserve", Supplier {
+            DataComponentType.builder<Long>()
+                .persistent(Codec.LONG)
+                .networkSynchronized(ByteBufCodecs.VAR_LONG)
                 .build()
         })
 }

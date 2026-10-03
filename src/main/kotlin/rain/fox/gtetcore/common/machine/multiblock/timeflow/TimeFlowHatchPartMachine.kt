@@ -58,12 +58,10 @@ import brachy.modularui.widgets.layout.Flow
  *   所以**不需要**手写 `loadAdditional`：老工程那段「把越界值夹回本档容量」的逻辑搬到了
  *   [ETTimeFlowHandler] 的读侧（sync 系统直接写字段，绕不过 setter，只能在读的时候兜）。
  *
- * ## 本期只做同维度，也没有「自动连唯一塔」
- * 绑定塔与自己在**同一维度**、且塔所在区块已加载时才拉；跨维度一律不拉（设定 §5：
+ * ## 本期只做同维度，外加「自动连唯一塔」
+ * 绑定的塔优先；**没绑定时回落到全服唯一的那座塔**（[MasterTowerRegistry.autoTower]，零操作连接）。
+ * 两种情况都要求塔与自己在**同一维度**、且塔所在区块已加载；跨维度一律不拉（设定 §5：
  * 跨维度只能靠时序钟搬运）。拉不到就是「本次不拉」，**静默等待**，不刷日志、不报错。
- * ⚠️ 老工程还有一条「未绑定时自动连全服唯一那座塔」（`MasterTowerRegistry.autoTower()`）——
- * 那个记账类属于**主塔切片**，本工程还没有，所以这里只有显式绑定一条路
- * （见 [pullTick] 里的 `TODO(主塔切片)`）。
  *
  * ## 档位
  * 交给 GTM 的档位就是变体表给的那个**真实档位**（`0..MAX`）。虚档位 `ETV` 那一档要等
@@ -216,7 +214,7 @@ class TimeFlowHatchPartMachine(
      *
      * 顺序与判据：
      * 1. 客户端 / 缓冲已满 ⇒ 直接返回；
-     * 2. **没绑定** ⇒ 返回（老工程这里还会回落到「自动连唯一塔」，那个记账类属主塔切片，见下面的 TODO）；
+     * 2. **没绑定** ⇒ 回落到 [MasterTowerRegistry.autoTower]（全服唯一塔模式下的零操作连接）；
      * 3. **维度不同 ⇒ 不拉**（设定 §5：跨维度只能靠时序钟搬运）；
      * 4. [TimeFlowTowers.find] 找不到（塔不在 / 区块未加载 / 那一格不是塔）⇒ **静默返回**，
      *    不刷日志也不报错 —— 塔没强加载，区块滚出视野是常态，不该变成刷屏；
@@ -238,10 +236,8 @@ class TimeFlowHatchPartMachine(
         val room = getTimeFlowRoom()
         if (room <= 0L) return
 
-        // TODO(主塔切片): 未绑定时回落到 `MasterTowerRegistry.autoTower()`（唯一塔模式下的零操作连接）。
-        //   老工程那一句是 `getBoundTower() ?: MasterTowerRegistry.autoTower() ?: return`；
-        //   本工程还没有主塔记账（MasterTowerRegistry 属主塔切片），所以现在只有显式绑定一条路。
-        val target = getBoundTower() ?: return
+        // 未绑定 ⇒ 回落到全服唯一那座塔（多塔模式下 autoTower() 恒 null ⇒ 必须显式绑定）
+        val target = getBoundTower() ?: MasterTowerRegistry.autoTower() ?: return
         if (target.dimension() != lvl.dimension()) return
 
         val tower = TimeFlowTowers.find(lvl, target.pos()) ?: return

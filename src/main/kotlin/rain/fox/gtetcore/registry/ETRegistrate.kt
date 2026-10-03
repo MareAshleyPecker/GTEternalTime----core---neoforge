@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.CreativeModeTabs
 import net.minecraft.world.item.Item
+import org.apache.logging.log4j.Level
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.util.lang.LangUtil
 
@@ -72,27 +73,33 @@ fun <T> GTRegistrate.inTab(
 }
 
 /**
- * 补页入口：把**已经注册完、来不及用 [inTab] 包住**的条目显式归到 [tab]。
+ * 补页入口：把**已经注册完**的条目显式归到 [tab]。
  *
- * ⚠️ 这里必须先绕一道「取同名的 ITEM 那一份条目」，不能把 [entries] 直接喂给
- * `GTRegistrate.setCreativeTab(entry, tab)`：创造页内容生成器
- * （`GTCreativeModeTabs.RegistrateDisplayItemsGenerator`）是遍历 `getAll(Registries.ITEM)`
- * 拿到的条目去查表的，而 `TAB_LOOKUP` 是 `IdentityHashMap`、按**对象身份**比对
- * （`isInCreativeTab` 的实现就是 `TAB_LOOKUP.get(entry) == tab`）。
- * 机器手里那份是 `MachineEntry`（注册在 MACHINE 注册表）、方块是 `BlockEntry`（BLOCK 注册表），
- * 与 ITEM 注册表那份**不是同一个对象** —— 直接传进去会静默失效、机器依然不进页。
+ * 必须先按注册名取回 `Registries.ITEM` 那一份条目再 `setCreativeTab`：`TAB_LOOKUP` 是
+ * `IdentityHashMap`、创造页生成器按**对象身份**比对（`GTCreativeModeTabs.java:95-97`），
+ * 而机器手里那份是 `MachineEntry`、方块是 `BlockEntry`，直接传进去静默失效。
  *
- * 同一件物品重复归页是幂等的（表里只是被覆盖成同一个值）。
+ * ⚠️ **机器不能走这条路**：机器的物品条目要到 `RegisterEvent` 派发时才由 `createEntry()` 建出来
+ * （`MachineBuilder.java:637-672`），构造期这里必然取不到 —— 见 [rain.fox.gtetcore.registry.ETMachines]。
+ * 取不到时打 WARN（原先静默 `continue`，「机器没进页」查了半天）。
  */
 fun GTRegistrate.assignTab(
     tab: RegistryEntry<CreativeModeTab, out CreativeModeTab>,
     entries: Iterable<RegistryEntry<*, *>>,
 ) {
     for (entry in entries) {
-        // 按注册名取回 ITEM 注册表那一份；取不到（无对应物品）就跳过，不让它炸构造期
         val itemEntry: RegistryEntry<Item, Item>? =
             getOptional<Item, Item>(entry.id.path, Registries.ITEM).orElse(null)
-        if (itemEntry != null) setCreativeTab(itemEntry, tab)
+        if (itemEntry == null) {
+            GTETSCore.LOGGER.log(
+                Level.WARN,
+                "[GTET] assignTab 归页失败：{} 在 ITEM 注册表里还没有同名的条目" +
+                    "（机器物品要到 RegisterEvent 才建出来，构造期归页对机器无效）",
+                entry.id,
+            )
+            continue
+        }
+        setCreativeTab(itemEntry, tab)
     }
 }
 
