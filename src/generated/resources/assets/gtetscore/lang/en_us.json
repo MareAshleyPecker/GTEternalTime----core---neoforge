@@ -71,7 +71,7 @@
   "item.gtetscore.advanced_terminal.setting.2": "Number of repetitions of the structure",
   "item.gtetscore.advanced_terminal.setting.2.tooltip": "Used to set the number of repetitions for the placement of repeating parts in structures like distillation towers, assembly lines, etc.",
   "item.gtetscore.advanced_terminal.setting.3": "No Hatch mode",
-  "item.gtetscore.advanced_terminal.setting.3.tooltip": "Whether to enable the no-Hatch mode. When enabled hatches are not placed: their positions are filled with the matching machine casing instead (hatches the structure requires are still placed).",
+  "item.gtetscore.advanced_terminal.setting.3.tooltip": "Whether to enable the no-Hatch mode. When enabled the machine is built with no hatches at all: every hatch position is filled with the matching machine casing instead.",
   "item.gtetscore.advanced_terminal.setting.4": "Coil replace mode",
   "item.gtetscore.advanced_terminal.setting.4.tooltip": "Whether to enable the coil-replace mode. After enabling the coil-replace mode, coil will be replaced by the Coil before.",
   "item.gtetscore.advanced_terminal.setting.5": "Is use AE items",

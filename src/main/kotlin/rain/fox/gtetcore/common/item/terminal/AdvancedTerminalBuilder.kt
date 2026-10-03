@@ -230,7 +230,7 @@ object AdvancedTerminalBuilder {
                 // 只有「线圈替换模式」才碰已有方块，而且只换线圈
                 if (!replaceCoil || current.block !is CoilBlock) continue
             }
-            val candidates = effectiveCandidates(cell.candidates, cell.required, settings)
+            val candidates = effectiveCandidates(cell.candidates, settings)
             if (candidates.isEmpty()) continue
             // 组键仍用「谓词原始候选」算（面板键与搭建键才能对上），见 TerminalSettings.lookupPreference
             val slot = StructureSlot(cell.pos, candidates, cell.groupKey)
@@ -332,11 +332,10 @@ object AdvancedTerminalBuilder {
      * ⚠️ 线圈等级为 0 时**不**砍掉最高档（给出全部档位）—— 这样「面板里选的档」与
      * 「搭建时算出来的组键」天然一致，不需要靠回退匹配兜底。
      *
-     * ⚠️ 无仓室模式只作用于「多出来的」仓室格：`required` 表示这一格的候选是
-     * 限次谓词的**最小数量**逼出来的（结构必须要有它），那种格子照放 ——
-     * 否则一台机器会因为缺必须的仓室而永远不成型。
+     * ⚠️ 无仓室模式：机器上**完全不放置仓室**，仓室格一律改放对应的机械方块
+     * （`required` 格也不例外 —— 该模式要的就是一台没有仓室的壳）。
      */
-    private fun effectiveCandidates(candidates: List<ItemStack>, required: Boolean,
+    private fun effectiveCandidates(candidates: List<ItemStack>,
                                     settings: AdvancedTerminalSettings): List<ItemStack> {
         if (candidates.isEmpty()) return candidates
         var result = candidates
@@ -345,9 +344,10 @@ object AdvancedTerminalBuilder {
             val index = settings.coilTier.coerceAtMost(candidates.size) - 1
             result = listOf(candidates[index.coerceAtLeast(0)])
         }
-        // 无仓室模式：仓室格改放对应的机械方块（不放仓室、也不留空）
-        if (settings.noHatch && !required) {
-            result.firstOrNull { !isHatch(it) }?.let { return listOf(it) }
+        // 无仓室模式：仓室格改放对应的机械方块；该格只接受仓室时留空
+        if (settings.noHatch) {
+            val casing = result.firstOrNull { !isHatch(it) }
+            return if (casing != null) listOf(casing) else emptyList()
         }
         return result
     }

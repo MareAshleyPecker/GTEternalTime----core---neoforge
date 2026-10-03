@@ -22,7 +22,7 @@ data class AdvancedTerminalSettings(
     val coilTier: Int = 0,
     /** 重复结构次数。 */
     val repeatCount: Int = 0,
-    /** 无仓室模式：仓室格改放对应的机械方块（默认关闭）。 */
+    /** 无仓室模式：机器上完全不放置仓室，仓室格改放对应的机械方块（默认关闭）。 */
     val noHatch: Boolean = false,
     /** 线圈替换模式。 */
     val replaceCoil: Boolean = false,
