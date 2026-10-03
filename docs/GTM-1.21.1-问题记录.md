@@ -246,6 +246,12 @@ MOD_BUS.addListener(::onGatherData)                                 // mod 总�
 | `stack.save(new CompoundTag())` 往返 NBT | 1.21 必须带 registryAccess：`ItemStack.CODEC` + `NbtOps` + `level.registryAccess().createSerializationContext(...)` |
 | `recipe.id` | 8.0.0 是 public 字段 + `getId()` 并存（Kotlin 解析会歧义）⇒ 统一显式写 `recipe.getId()` |
 | `typealias` 放类里 | Kotlin 语法不允许，必须放文件顶层 |
+| `.or(Predicates.autoAbilities(true, false, true))` 指望它给能源仓/物品 IO | **`autoAbilities(boolean, boolean, boolean)` 的三个布尔是（维护仓, 消音仓, 并行仓）**，一个 IO 槽都不给（javap 逐条确认 `MAINTENANCE` / `MUFFLER` / `PARALLEL_HATCH`）；能源仓与物品输入输出要靠 `autoAbilities(*definition.recipeTypes)`。另外 8.0.0 的机壳谓词要用 `.and(...)` 串（`.or(...)` 是另一套语义） |
+| `Predicates` / 谓词类型 | 包从 `api.pattern` 搬到 `api.multiblock`；`TraceabilityPredicate` → `MultiPredicate`（下限方法名不变：`setMinGlobalLimited` / `setMaxGlobalLimited` / `setPreviewCount`；另有 `setMinCount` / `setMaxCount` / `setExactLimit` / `setPriority`） |
+| `FactoryBlockPattern.start().aisle(...)` | 换 `MultiblockPatternBuilder.start().slice(...)`（无参 `start()` = 默认三轴） |
+| `IDisplayUIMachine#addDisplayText` | 已删；多方块面板改 MUI，扩展点是 `WorkableElectricMultiblockMachine#getWidgetsForDisplay(PanelSyncManager)`；服务端才有的数据用 `GenericListSyncHandler` + `DynamicWidget`（`DynamicWidget<W extends DynamicWidget<W>>` 的自引用泛型在 Kotlin 里要写 `DynamicWidget<Nothing>()`） |
+| 覆写 `createRecipeLogic(...)` 换配方逻辑 | 工厂已删；`WorkableMultiblockMachine(BlockEntityCreationInfo, RecipeLogic)` 两参构造内部 `attachTrait(recipeLogic)`，改成在 super 调用里注入 |
+| `MetaMachineBlockEntity` | 整个类已删（`MetaMachine` 自己就是 BlockEntity）；引用它的老 mixin 全部作废 |
 
 ---
 
@@ -386,6 +392,34 @@ private fun mirrorToBaseFields() {
 - 多线程机器上这套单进度字段只能反映一条线程，逐线程的真实进度另走我们自己的显示层。
 
 **结论**：任何自写 `RecipeLogic` 子类，**镜像必须落字段**；「有没有 setter」不是判断依据（`javap` 只列方法，容易误判成"只读"）。
+
+---
+
+## 16. 构建还在跑就启动客户端 → `NoClassDefFoundError`（严重度：中 · 状态：已定性；不是代码问题）
+
+**一句话**：强制重编会重写（乃至短暂删空）`build\classes\java\main` 与 `build\classes\kotlin\main`，此时**正在运行的客户端**一旦加载某个类，就是 `NoClassDefFoundError` / `ClassNotFoundException` —— 看着像"代码丢了"，其实类好端端在磁盘上。
+
+**来源**（原文）：
+
+```
+java.lang.NoClassDefFoundError: rain/fox/gtetcore/integration/jade/provider/JadeStoredBar
+	at ...ETTimeFlowStorageProvider.appendTooltip(ETTimeFlowStorageProvider.java:66)
+	at ...snownee.jade.impl.BlockAccessorClientHandler.gatherComponents(BlockAccessorClientHandler.java:93)
+Caused by: java.lang.ClassNotFoundException: rain.fox.gtetcore.integration.jade.provider.JadeStoredBar
+	at cpw.mods.securejarhandler/cpw.mods.cl.ModuleClassLoader.loadClass(ModuleClassLoader.java:220)
+```
+
+**触发**：客户端已经开着，同时在另一个终端跑 `gradlew compileKotlin compileJava --rerun-tasks --no-build-cache`（或任何写 `build/classes` 的任务）。
+
+**成因**：`--rerun-tasks` 会重新执行任务，Gradle 先把该任务的输出目录清掉再写；Java 与 Kotlin 是两个独立输出目录，谁被清到、什么时候被清，取决于两个任务谁先跑。客户端这时若恰好首次加载某个类（Jade 的 tooltip provider 是**按需**加载的，不是启动期加载，所以崩在游戏中途而不是启动时），就会撞上"文件此刻不存在"。
+
+**处理**：
+
+- 正确顺序：**等构建彻底结束**（`build\classes` 里文件时间戳稳定）→ 再 `runClient`。
+- 已经崩了的那次**不用改代码**：关掉客户端重开即可。
+- 判断依据：报错类在磁盘上确实存在（`Get-Item build\classes\...\X.class` 有时间戳），且错误只在"构建与游戏并发"的那个时间窗出现。
+
+**历史实例**：`...client.mui.MultiblockPreviewFullscreen`（更早一次）、`...jade.provider.JadeStoredBar`（本次）。
 
 ---
 
