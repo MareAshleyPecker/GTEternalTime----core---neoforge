@@ -6,8 +6,7 @@ import rain.fox.gtetcore.util.lang.LangUtil
  * 时序钟的双语条目。
  *
  * 这里的是**带数字的运行时行**（汇率、相位、存量都会变，所以只能 `Component.translatable(键, 参数...)`）；
- * 两行**静态**说明（搬运 / 升级）由 `ETItems` 自己的 `LangUtil.add` 登记，键是
- * `item.gtetscore.clock_of_time_sequence.tooltip.<名字>`。
+ * 两行**静态**说明（搬运 / 升级）也在本对象里登记（见 [TOOLTIP_CARRY] / [TOOLTIP_UPGRADE]）。
  *
  * 必须在数据生成之前登记 —— `CommonProxy.kotlinInit()` 会调 [register]，早于 `GatherDataEvent`。
  *
@@ -47,6 +46,12 @@ object TimeClockLang {
 
     /** 解绑成功的聊天提示。 */
     const val UNBOUND: String = PREFIX + "unbound"
+
+    // 静态 tooltip 两行：键里用的是物品注册名 clock_of_time_sequence（不是上面那个 time_clock）
+    private const val TOOLTIP_PREFIX = "item.gtetscore.clock_of_time_sequence.tooltip."
+
+    const val TOOLTIP_CARRY: String = TOOLTIP_PREFIX + "carry"
+    const val TOOLTIP_UPGRADE: String = TOOLTIP_PREFIX + "upgrade"
 
     /** 绑上了但没有取用权限时的聊天提示（比 [BOUND] 多一句说明）。 */
     const val BOUND_DENIED: String = PREFIX + "bound_denied"
@@ -107,5 +112,15 @@ object TimeClockLang {
         )
         LangUtil.add(BOUND_TIP, "Bound tower: %s", "已绑定主控塔：%s")
         LangUtil.add(UNBOUND_TIP, "Not bound to any master tower", "未绑定主控塔")
+        LangUtil.add(
+            TOOLTIP_CARRY,
+            "Stores time flow (TF); bind it to a master tower to carry TF across dimensions",
+            "存储时间流（TF）；绑定主控塔后可跨维度搬运"
+        )
+        LangUtil.add(
+            TOOLTIP_UPGRADE,
+            "Upgrade items raise the capacity tier (L1 -> L3); stored TF is kept",
+            "用升级件提升容量档位（L1 → L3），钟内 TF 不丢"
+        )
     }
 }

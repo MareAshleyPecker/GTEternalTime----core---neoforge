@@ -7,6 +7,8 @@ import net.minecraft.network.chat.Component
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.common.item.terminal.AdvancedTerminalBehavior
 import rain.fox.gtetcore.common.item.timeflow.TimeClockBehavior
+import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
+import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.test.Ldlib2ProbeItem
 import rain.fox.gtetcore.util.lang.LangUtil
 
@@ -17,65 +19,10 @@ import rain.fox.gtetcore.util.lang.LangUtil
  * 与时序钟（时间流 TF 的显示 / 搬运道具，见 `common/item/timeflow/`）。
  * Registrate 是在 builder 被创建的那一刻就登记的，所以**必须在 mod 构造期取一次**
  * [ADVANCED_TERMINAL] 的值（见 `CommonProxy.kotlinInit`），否则物品进不了注册表。
+ *
+ * 语言键与译文在 `data/lang/`（[AdvancedTerminalLang] / [TimeClockLang]），本文件只管注册。
  */
 object ETItems {
-
-    /** 「一次搭建的方块数超限」提示键；值必须与 `AdvancedTerminalBuilder` 里引用的字面量一致。 */
-    @Suppress("ConstPropertyName")
-    private const val build_too_many: String = "item.gtetscore.advanced_terminal.build.too_many"
-
-    /**
-     * 物品 tooltip 键：老工程三行 tooltip 里**本阶段唯一成立**的那行（右键空气开面板）。
-     *
-     * 另两行（潜行右键控制器自动搭建 / 潜行右键绑定 AE）分别属于搭建手势与未移植的 AE 切片，这里不登记。
-     * 键名用描述式而不是老工程的 `tooltip.<序号>`，免得将来照序号补行时撞键。
-     */
-    @Suppress("ConstPropertyName")
-    private const val tip_open_panel: String = "item.gtetscore.advanced_terminal.tooltip.open_panel"
-
-    /** 时序钟的两行静态说明（带数字的那些行在 `TimeClockLang` 里）。 */
-    @Suppress("ConstPropertyName")
-    private const val clock_tip_carry: String = "item.gtetscore.clock_of_time_sequence.tooltip.carry"
-
-    @Suppress("ConstPropertyName")
-    private const val clock_tip_upgrade: String = "item.gtetscore.clock_of_time_sequence.tooltip.upgrade"
-
-    init {
-        // 双语条目：英文进 registrate 的 en_us，中文由 ZhCnLangProvider 写 zh_cn（各写各的文件）。
-        // ⚠️ 物品名那条不要在这里写：`.lang(...)` 负责 en、LangUtil.ITEM_LANG 负责 cn，
-        //    再用 LangUtil.add 写一遍会因为「重复的翻译键」让数据生成直接失败。
-
-        LangUtil.add(
-            build_too_many,
-            "Structure is too large for one build: %s blocks (limit %s)",
-            "结构过大，一次搭建的方块上限：%s 格（上限 %s）"
-        )
-        // 老代码「潜行右键非控制器方块」走的是 AE 绑定手势、什么都不提示；AE 切片未做，这里改成明确反馈
-        LangUtil.add(
-            AdvancedTerminalBehavior.msg_not_controller,
-            "This block is not a multiblock controller",
-            "该方块不是多方块控制器"
-        )
-        // 物品 tooltip（老工程原文照搬）
-        LangUtil.add(
-            tip_open_panel,
-            "Right-click air: open the terminal settings",
-            "右键空气：打开终端设置"
-        )
-
-        // 时序钟的静态 tooltip 两行（老工程原文照搬）：
-        // 「绑定主控塔」那一条手势的运行时提示在 TimeClockLang 里，走的是带数字的 translatable。
-        LangUtil.add(
-            clock_tip_carry,
-            "Stores time flow (TF); bind it to a master tower to carry TF across dimensions",
-            "存储时间流（TF）；绑定主控塔后可跨维度搬运"
-        )
-        LangUtil.add(
-            clock_tip_upgrade,
-            "Upgrade items raise the capacity tier (L1 -> L3); stored TF is kept",
-            "用升级件提升容量档位（L1 → L3），钟内 TF 不丢"
-        )
-    }
 
     /** 高级终端 — 潜行右键多方块控制器自动搭建；右键空气开设置面板（MUI，见 `AdvancedTerminalPanel`）。 */
     @JvmField
@@ -99,7 +46,7 @@ object ETItems {
                         AdvancedTerminalBehavior,
                         // 8.0.0 删掉了老的 `com.gregtechceu.gtceu.common.item.TooltipBehavior`，
                         // 现址是 `...common.item.behavior.TooltipBehavior`，依旧挂在组件上生效
-                        TooltipBehavior { lines -> lines.add(Component.translatable(tip_open_panel)) }
+                        TooltipBehavior { lines -> lines.add(Component.translatable(AdvancedTerminalLang.TOOLTIP_OPEN_PANEL)) }
                     )
                 }
                 .register()
@@ -141,8 +88,8 @@ object ETItems {
                     item.attachComponents(
                         TimeClockBehavior,
                         TooltipBehavior { lines ->
-                            lines.add(Component.translatable(clock_tip_carry))
-                            lines.add(Component.translatable(clock_tip_upgrade))
+                            lines.add(Component.translatable(TimeClockLang.TOOLTIP_CARRY))
+                            lines.add(Component.translatable(TimeClockLang.TOOLTIP_UPGRADE))
                         }
                     )
                 }

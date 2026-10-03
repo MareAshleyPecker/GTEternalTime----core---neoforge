@@ -5,9 +5,9 @@ import rain.fox.gtetcore.util.lang.LangUtil
 /**
  * 高级终端设置面板用到的语言键。
  *
- * 只登记**本次 MUI 界面真正引用**的键：设置面板（标题 + 8 项设置 + tooltip）、
- * 两块分级面板（标题 / tooltip / 空状态）。老项目里那几个 AE 绑定提示键属于未移植的 AE 切片，这里不登记；
- * 物品名与 `build.too_many` 也已由别处登记，重复登记会让数据生成因「重复的翻译键」直接失败。
+ * 只登记本切片真正引用的键：设置面板（标题 + 8 项设置 + tooltip）、两块分级面板（标题 / tooltip / 空状态），
+ * 以及物品的 build / tooltip 提示。老项目那几个 AE 绑定提示键属于未移植的 AE 切片，这里不登记。
+ * 物品名由登记处的 `.lang(...)` 与 `LangUtil.ITEM_LANG` 负责，这里不要再写一遍（重复登记会让数据生成失败）。
  *
  * 登记进 [LangUtil] 后：en 由 registrate 的语言钩子写进 en_us，cn 由 [ZhCnLangProvider] 写进 zh_cn。
  *
@@ -49,6 +49,15 @@ object AdvancedTerminalLang {
     const val PANEL_PICK_TIP: String = "$PREFIX.panel.pick.tooltip"
     const val PANEL_EMPTY: String = "$PREFIX.panel.empty"
 
+    /** 一次搭建的方块数超限。 */
+    const val BUILD_TOO_MANY: String = "$PREFIX.build.too_many"
+
+    /** 潜行右键到的不是多方块控制器。 */
+    const val BUILD_NOT_CONTROLLER: String = "$PREFIX.build.not_controller"
+
+    /** 物品 tooltip：右键空气开面板。 */
+    const val TOOLTIP_OPEN_PANEL: String = "$PREFIX.tooltip.open_panel"
+
     /**
      * 幂等登记（同名键重复登记只是覆盖同一张表）。
      *
@@ -57,6 +66,13 @@ object AdvancedTerminalLang {
     @JvmStatic
     fun register() {
         // ⚠️ 物品名（[PREFIX] 本身）由 Registrate 的 `.lang(...)` 生成，这里**不要**再写一遍。
+        LangUtil.add(
+            BUILD_TOO_MANY,
+            "Structure is too large for one build: %s blocks (limit %s)",
+            "结构过大，一次搭建的方块上限：%s 格（上限 %s）"
+        )
+        LangUtil.add(BUILD_NOT_CONTROLLER, "This block is not a multiblock controller", "该方块不是多方块控制器")
+        LangUtil.add(TOOLTIP_OPEN_PANEL, "Right-click air: open the terminal settings", "右键空气：打开终端设置")
         LangUtil.add(TITLE, "Advanced Terminal Setting", "高级终端设置")
 
         LangUtil.add(SETTING_1, "Coil level", "线圈等级")

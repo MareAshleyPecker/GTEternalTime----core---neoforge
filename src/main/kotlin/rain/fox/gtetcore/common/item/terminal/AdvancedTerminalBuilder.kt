@@ -26,6 +26,7 @@ import net.minecraft.world.phys.BlockHitResult
 import net.neoforged.neoforge.capabilities.Capabilities
 import net.neoforged.neoforge.items.IItemHandler
 import org.apache.commons.lang3.ArrayUtils
+import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
 import java.lang.reflect.Modifier
 
 /**
@@ -50,14 +51,6 @@ object AdvancedTerminalBuilder {
      * 上限内是一 tick 完成，超过就让玩家自己分几次搭（或改大这个常量）。
      */
     const val max_blocks_per_build: Int = 512
-
-    /**
-     * 「一次搭建太大」的提示键。
-     *
-     * 老项目是 `AdvancedTerminalLang.build_too_many`；那个语言对象要连界面一起移植，
-     * 这里先写死键名（值与原项目一致），等界面切片再把常量挪回去。
-     */
-    private const val build_too_many: String = "item.gtetscore.advanced_terminal.build.too_many"
 
     private val FACINGS = arrayOf(
         Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST
@@ -248,7 +241,7 @@ object AdvancedTerminalBuilder {
         }
 
         if (targets.size > max_blocks_per_build) {
-            player.displayClientMessage(Component.translatable(build_too_many,
+            player.displayClientMessage(Component.translatable(AdvancedTerminalLang.BUILD_TOO_MANY,
                 targets.size, max_blocks_per_build), true)
             return Result(0, 0, 0, true)
         }
@@ -426,7 +419,7 @@ object AdvancedTerminalBuilder {
         }
 
         if (targets.size > max_blocks_per_build) {
-            player.displayClientMessage(Component.translatable(build_too_many,
+            player.displayClientMessage(Component.translatable(AdvancedTerminalLang.BUILD_TOO_MANY,
                 targets.size, max_blocks_per_build), true)
             return Result(0, 0, 0, true)
         }
