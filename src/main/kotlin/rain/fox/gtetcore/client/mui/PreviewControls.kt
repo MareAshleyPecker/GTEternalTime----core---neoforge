@@ -52,7 +52,6 @@ object PreviewControls {
     fun attach(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition, schemaWidth: Int) {
         try {
             preview.child(buildRow(preview, definition, schemaWidth))
-            PreviewCameraFit.debugLog(if (fullscreen) "全屏" else "内嵌", preview.multiblockSchemaInfo, schemaWidth)
         } catch (t: Throwable) {
             GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 挂载多方块预览控制按钮失败", t)
         }

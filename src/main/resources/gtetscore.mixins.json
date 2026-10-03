@@ -4,12 +4,11 @@
   "package": "rain.fox.gtetcore.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "gtm.MachineUIPanelBuilderMixin"
+    "gtm.MachineUIPanelBuilderMixin",
+    "gtm.AutoOutputTraitMixin"
   ],
   "client": [
     "modularui.debug.IThemeEncoderMixin",
-    "modularui.debug.SchemaWidgetDebugMixin",
-    "modularui.debug.BaseSchemaRendererDebugMixin",
     "gtm.MultiblockPreviewWidgetMixin"
   ],
   "injectors": {
