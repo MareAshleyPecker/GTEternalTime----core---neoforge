@@ -195,11 +195,26 @@ class MachineIoConfigPage(
         }
         renderer.highlightRenderer(BlockHighlight(HOVER_FACE_COLOR, HIGHLIGHT_THICKNESS))
 
+        // BaseSchemaRenderer.schema() 返回的就是构造时传进去的那个实例（javap：schema 字段只在构造器赋值、
+        // getter 直接返回字段），所以 SchemaWidget.draw 每帧读到的 getFocus() 就是 MachineSchema 的覆盖值。
+        val schemaFocus = renderer.schema().getFocus()
+
         return renderer.asWidget()
             .name("io_config_schema")
             .sizeRel(1f)
             .scale(SCHEMA_DISTANCE)
             .yaw(SCHEMA_YAW)
+            .enableDragRotation(true)
+            .enableScrollScaling(true)
+            // SchemaWidget.draw 每帧拿 `schema.getFocus() + offset` 当相机 lookAt；把差值补掉，
+            // 保证 lookAt 恒为方块几何中心 (0.5, 0.5, 0.5)
+            .offset(
+                SCHEMA_FOCUS.x - schemaFocus.x(),
+                SCHEMA_FOCUS.y - schemaFocus.y(),
+                SCHEMA_FOCUS.z - schemaFocus.z()
+            )
+            // 中键拖动改的就是上面这个 offset（SchemaWidget.onMouseDrag 的 button == 2 分支），必须关掉
+            .enableDragTranslation(false)
             .listenGuiAction(IGuiAction.MouseReleased { _, button -> onFaceClicked(renderer, button) })
             .tooltipAutoUpdate(true)
             .tooltipDynamic { r ->
