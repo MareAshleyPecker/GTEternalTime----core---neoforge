@@ -13,6 +13,7 @@ import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.ItemStack
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent
 import org.apache.logging.log4j.Level
+import rain.fox.gtetcore.api.timeflow.ETTimeFlowCapability
 import rain.fox.gtetcore.registry.ETMachines
 import rain.fox.gtetcore.registry.ETRegistrate
 import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
@@ -133,11 +134,7 @@ class ETGTAddon : IGTAddon {
         fun verify() {
             checkAddonDiscovered()
             checkMachinesRegistered()
-            // TODO(时间流切片): checkTimeFlowCapabilityRegistered()
-            //   老工程查的是 GTRegistries.RECIPE_CAPABILITIES.get(ETTimeFlowCapability.NAME)。
-            //   8.0.0 里 GTRecipeCapabilities.init() **不再回调 addon**（对比老工程 7.5.3 的
-            //   `registerRecipeCapabilities()`），配方能力改由 GTRegistrate 自己登记，
-            //   所以等 ETTimeFlowCapability 移植过来时，自检要改成查 GTRegistries.RECIPE_CAPABILITIES。
+            checkTimeFlowCapabilityRegistered()
             // TODO(材料切片): checkElementsRegistered()
             //   等 ETElements 移植过来，查 GTRegistries.ELEMENTS。
             // TODO(并行仓切片): hideGtmParallelHatchesFromCreativeTabs()
@@ -183,6 +180,39 @@ class ETGTAddon : IGTAddon {
             check(registered) {
                 "GTET 的机器没有注册进 GTRegistries.MACHINES：$machineId。" +
                     "注册入口是 ETMachines（CommonProxy.kotlinInit 里那次取值负责触发类加载）。"
+            }
+        }
+
+        /**
+         * 自检 ③：TF 的配方能力真的注册进了 GTM 的能力表。
+         *
+         * 时刻（`FMLCommonSetupEvent`）满足自检的前提：`RegisterEvent` 已全部派发完、
+         * 注册表已冻结，那时 `GTRegistries.RECIPE_CAPABILITIES` 里有什么就是什么。
+         *
+         * ⚠️ 8.0.0 与老工程的两处差别（已读源码核实）：
+         * 1. 查的是 [GTRegistries.RECIPE_CAPABILITIES] —— 8.0.0 里它是一个真正的注册表
+         *    （`GTRegistries.makeRegistry(GTRegistries.Keys.RECIPE_CAPABILITY)`，`GTRegistries.java:125`），
+         *    老工程那张「unfreeze 与 freeze 之间的可写表」连同
+         *    `IGTAddon#registerRecipeCapabilities()` 回调一起没了；
+         * 2. 能力现在是**注册表项**，所以查找键是带命名空间的全名 `gtetscore:time_flow`
+         *    （老工程是裸名 `time_flow`）。注册入口见 [ETTimeFlowCapability.register]。
+         *
+         * 缺了这条注册的后果是「配方里的 `gtetscore:time_flow` 解析不出来、TF 也扣不动」，
+         * 而且报错会拖到配方加载期才出现 —— 所以在这里响亮地崩掉。
+         */
+        private fun checkTimeFlowCapabilityRegistered() {
+            val capabilityId = GTETSCore.id(ETTimeFlowCapability.NAME)
+            val registered = GTRegistries.RECIPE_CAPABILITIES.get(capabilityId)
+            GTETSCore.LOGGER.log(
+                Level.INFO,
+                "[GTET] 配方能力自检：{} → {}",
+                capabilityId,
+                if (registered != null) "registered" else "MISSING",
+            )
+            check(registered === ETTimeFlowCapability.CAP) {
+                "TF 的配方能力没有注册进 GTRegistries.RECIPE_CAPABILITIES：$capabilityId。" +
+                    "注册入口是 ETTimeFlowCapability.register（由 CommonProxy.kotlinInit 调用）。" +
+                    "少了它，配方里的 $capabilityId 会解析不出来、TF 也扣不动。"
             }
         }
 

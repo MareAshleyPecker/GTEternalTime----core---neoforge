@@ -230,6 +230,13 @@ MOD_BUS.addListener(::onGatherData)                                 // mod 总�
 | `IFancyUIMachine#createUIWidget()`（LDLib 控件） | `IMuiMachine#buildMainUI(...)`（MUI） |
 | `@Persisted` / `@DescSynced` / `MANAGED_FIELD_HOLDER` | `@field:SaveField` / `@field:SyncToClient` / 持有者全删 |
 | `saveCustomPersistedData` / `loadCustomPersistedData` | `saveAdditional` 是 final；改 `@SaveField` 字段；读档覆写 `loadAdditional`（在 super 之前） |
+| `IMachineBlockEntity` / `IInteractedMachine` | 都删了；机器构造收 `BlockEntityCreationInfo`，右键手势覆写成 `MetaMachine#onUseWithItem(ExtendedUseOnContext)`（拿东西的那一路）或 `#onUse(...)`（空手那一路），两者都排在 `tryOpenUI(...)` 之前 |
+| `RecipeCapability(String name, …)`、`getName()` = `recipe.capability.<name>.name` | 构造器收 `ResourceLocation`；`getName()` = `id.toLanguageKey("recipe_capability")` ⇒ 键是 `recipe_capability.<命名空间>.<路径>`，配方里写的键也变成带命名空间的全名 |
+| `IGTAddon#registerRecipeCapabilities()` 里 `GTRegistries.RECIPE_CAPABILITIES.register(...)` | 回调已删；照 `GTRecipeCapabilities.java:27-31` 走 `REGISTRATE.generic(路径, GTRegistries.Keys.RECIPE_CAPABILITY, 构造器).register()` |
+| `handleRecipeInner` 返回 `null` 表示「已结清」 | 返回标了 `@NotNull`，**不许返回 `null`**；结清要返回**空表** |
+| 处理器可以不是 `MachineTrait`（自己拼 `RecipeHandlerList`） | `MultiblockPartMachine#getHandlerList()` 只从 `getTraitsByInterface(IRecipeHandlerTrait.class)` 收；且 `@SaveField` 只对 `ISyncManaged` 生效 ⇒ 处理器必须继承 `NotifiableRecipeHandlerTrait`，否则既不进多方块、也存不了档 |
+| `Content` 的字段式访问（`content.chance`） | 8.0.0 的 `Content` 是 record，组件访问器无 `get` 前缀；Kotlin 侧仍按属性写（`content.chance` / `content.content`）即可 |
+| 只实现 `IMuiMachine` 的部件覆写 `onLoad()` 写 `super.onLoad()` | 接口链上有 NeoForge `IBlockEntityExtension#onLoad()` default ⇒ Kotlin 报 `Multiple supertypes available`，要写 `super<TieredPartMachine>.onLoad()` |
 
 ---
 

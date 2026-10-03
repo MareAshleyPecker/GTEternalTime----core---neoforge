@@ -10,10 +10,12 @@ import net.neoforged.neoforge.data.event.GatherDataEvent
 import org.apache.logging.log4j.Level
 import rain.fox.gtetcore.ETGTAddon
 import rain.fox.gtetcore.GTETSCore
+import rain.fox.gtetcore.api.timeflow.ETTimeFlowCapability
 import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
 import rain.fox.gtetcore.config.GtetConfig
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
+import rain.fox.gtetcore.data.lang.TimeFlowHatchLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
 import rain.fox.gtetcore.data.recipe.ETRecipeProvider
 import rain.fox.gtetcore.registry.ETDataComponents
@@ -76,6 +78,10 @@ class CommonProxy {
         GtetConfig.register()
         // 数据组件（1.21 取代物品 NBT）也必须挂到 mod 事件总线上
         ETDataComponents.REGISTRY.register(MOD_BUS)
+        // 配方能力（TF 的 `gtetscore:time_flow`）必须在构造期排队进 RegisterEvent；
+        // ⚠️ 它**不能**晚于数据包加载 —— 配方 json 里的能力键是靠注册表 codec 反查的。
+        //    8.0.0 已经没有 `IGTAddon#registerRecipeCapabilities()` 那个回调了（详见 ETTimeFlowCapability 的类注释）。
+        ETTimeFlowCapability.register(ETRegistrate.REGISTRATE)
         // Registrate 只在 builder 被创建的那一瞬间登记，所以必须在这里取一次值。
         // ⚠️ 别在这里读 MachineEntry 的值（如 .tier）：mod 构造期注册表还没建好，
         //    读它会抛 `IllegalStateException: Registry not present for DeferredHolder{... gtceu:machine}`。
@@ -101,6 +107,9 @@ class CommonProxy {
         AdvancedTerminalLang.register()
         // 时序钟的运行时语言键（tooltip 的汇率 / 相位 / 存量那几行）
         TimeClockLang.register()
+        // 时序仓的语言键：含 **配方能力名** `recipe_capability.gtetscore.time_flow`
+        // （TF 不足时报错文案用的就是它，GTM 不会替 addon 能力补这条翻译）
+        TimeFlowHatchLang.register()
     }
 
     /**
