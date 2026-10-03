@@ -1,10 +1,7 @@
 package rain.fox.gtetcore.client.mui
 
 import brachy.modularui.widgets.SchemaWidget
-import com.gregtechceu.gtceu.api.mui.MultiblockSchemaInfo
 import com.gregtechceu.gtceu.client.mui.schema.MutableSchema
-import org.apache.logging.log4j.Level
-import rain.fox.gtetcore.GTETSCore
 import kotlin.math.sqrt
 import kotlin.math.tan
 
@@ -61,33 +58,5 @@ object PreviewCameraFit {
     fun reset(widget: SchemaWidget?, schema: MutableSchema?) {
         if (widget == null) return
         widget.scale(fitDistance(schema)).yaw(DEFAULT_YAW).pitch(DEFAULT_PITCH).offset(0f, 0f, 0f)
-    }
-
-    /**
-     * TEMP(诊断)：打出取景的输入与结果，定位「内嵌预览里 3D 内容位置不对」；查清后删。
-     *
-     * `SchemaWidget.draw` 每帧用 `focus + offset` 当 lookAt、`scale` 当距离（`SchemaWidget.draw` 偏移 0-77），
-     * 所以焦点 / 平移 / 距离三项就决定了 3D 内容在框里的落点。
-     */
-    @JvmStatic
-    fun debugLog(label: String, info: MultiblockSchemaInfo?, schemaWidth: Int) {
-        try {
-            val schema = info?.mapSchema
-            val widget = info?.multiSchema
-            val bounds = schema?.bounds
-            GTETSCore.LOGGER.log(
-                Level.INFO,
-                "[GTET-TEST] 预览取景({}) 3D控件宽={} bounds={}..{} focus=({}, {}, {}) " +
-                    "scale={} yaw={} pitch={} offset=({}, {}, {}) 重算fit={}",
-                label, schemaWidth,
-                bounds?.first?.toShortString() ?: "null", bounds?.second?.toShortString() ?: "null",
-                schema?.focus?.x() ?: -1f, schema?.focus?.y() ?: -1f, schema?.focus?.z() ?: -1f,
-                widget?.scale ?: -1f, widget?.yaw ?: -1f, widget?.pitch ?: -1f,
-                widget?.offset?.x ?: -1f, widget?.offset?.y ?: -1f, widget?.offset?.z ?: -1f,
-                fitDistance(schema)
-            )
-        } catch (t: Throwable) {
-            // 诊断日志本身不能影响开界面
-        }
     }
 }

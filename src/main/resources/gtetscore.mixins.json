@@ -8,6 +8,8 @@
   ],
   "client": [
     "modularui.debug.IThemeEncoderMixin",
+    "modularui.debug.SchemaWidgetDebugMixin",
+    "modularui.debug.BaseSchemaRendererDebugMixin",
     "gtm.MultiblockPreviewWidgetMixin"
   ],
   "injectors": {
