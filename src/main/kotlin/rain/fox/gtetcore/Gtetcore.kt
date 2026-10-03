@@ -1,8 +1,10 @@
 package rain.fox.gtetcore
 
 import rain.fox.gtetcore.config.GtetConfig
+import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
 import rain.fox.gtetcore.registry.ETDataComponents
+import rain.fox.gtetcore.registry.ETItems
 import rain.fox.gtetcore.registry.ETRegistrate
 import rain.fox.gtetcore.registry.ETMachines
 import rain.fox.gtetcore.test.TestMachines
@@ -15,6 +17,7 @@ import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
+import net.neoforged.neoforge.common.NeoForge
 import net.neoforged.neoforge.data.event.GatherDataEvent
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -50,6 +53,9 @@ object Gtetcore {
         TestMachines.TEST_SYNC_PART
         @Suppress("UNUSED_EXPRESSION")
         ETMachines.PARALLEL_HATCH_IV
+        // 高级终端物品同理：registrate 只在 builder 被创建时登记，必须在这里取一次值
+        @Suppress("UNUSED_EXPRESSION")
+        ETItems.ADVANCED_TERMINAL
         LOGGER.log(
             Level.INFO,
             "[GTET-TEST] 阶段 3 测试机器已登记：{}:test_sync_part，registrate 命名空间 = {}",
@@ -66,6 +72,13 @@ object Gtetcore {
 
         // 数据生成（runData）时补中文语言文件
         MOD_BUS.addListener(::onGatherData)
+
+        // 高级终端静态组预置：GAME 总线的手工注册。
+        // ⚠️ 刻意不用 `@EventBusSubscriber`：NeoForge 21.1.252 的注册器已不读注解的 `bus` 成员，
+        //    而 KFF 5.7.0 的 AutoKotlinEventBusSubscriber 会去调 FML 4.0.44 里已删除的
+        //    `net.neoforged.fml.Bindings` —— 只要存在带该注解的 Kotlin object，mod 构造期就
+        //    `NoClassDefFoundError: net/neoforged/fml/Bindings` 直接崩（runData 与游戏都起不来）。
+        NeoForge.EVENT_BUS.addListener(TerminalGroupSeeder::onPlayerTick)
 
         println(obj)
     }

@@ -19,5 +19,8 @@
   "block.gtetcore.parallel_hatch_iv": "IV Parallel Hatch (32 Parallel)",
   "block.gtetcore.test_sync_part": "Test Sync Part",
   "gtetcore.machine.overclock_hatch_1024x_saving_max.tooltip.0": "so goooooood~",
-  "gtetcore.machine.overclock_hatch_4x_lossy4.tooltip.0": "Looks pretty useless"
+  "gtetcore.machine.overclock_hatch_4x_lossy4.tooltip.0": "Looks pretty useless",
+  "item.gtetcore.advanced_terminal": "§bAdvanced Terminal",
+  "item.gtetcore.advanced_terminal.build.not_controller": "This block is not a multiblock controller",
+  "item.gtetcore.advanced_terminal.build.too_many": "Structure is too large for one build: %s blocks (limit %s)"
 }

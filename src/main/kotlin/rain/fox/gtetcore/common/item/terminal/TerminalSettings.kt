@@ -1,3 +1,4 @@
+@file:Suppress("UNUSED")
 package rain.fox.gtetcore.common.item.terminal
 
 import com.gregtechceu.gtceu.common.block.CoilBlock

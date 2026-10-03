@@ -192,7 +192,7 @@ object StructureBuildPlanner {
                     for (a in 0 until palm) {
                         val predicate = pattern.predicates.get(slice.charAt(b, a))
                         // 没登记的字符 / 空气 / 任意方块：这一格什么都不用放，跳过
-                        if (predicate == null || predicate.isAir() || predicate.isAny()) continue
+                        if (predicate == null || predicate.isAir || predicate.isAny) continue
 
                         cursor.set(origin.x, origin.y, origin.z)
                         cursor.move(sliceDir, sliceOffset)

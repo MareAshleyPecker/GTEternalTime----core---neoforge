@@ -1,3 +1,4 @@
+@file:Suppress("UNUSED")
 package rain.fox.gtetcore.config
 
 import net.neoforged.fml.ModList
@@ -65,12 +66,12 @@ object GtetConfig {
 
         // ── 以下分类尚未移植，先留编号占位（xxx0 / xxx01 / xxx02 …），轮到对应功能时按序填入 ──
         // xxx0 = dev（开发者选项）：exportModeEnabled / exportDirectory / recipeExportDirectory / SendThreadDiagnosticlog
-        val xxx0: Unit = Unit
+        val xxx0 = Unit
         // xxx01 = timeflow（时序与潮汐系数）：masterTowerUnique / tideAmplitude / tidePeriod / overclockFactorK /
         //         timeBottleHandFactor / towerSegmentCapacity / towerMaxSegments / towerWhitelist
-        val xxx01: Unit = Unit
+        val xxx01 = Unit
         // xxx02 = overlay（结构工具覆盖层）：writeColor / detectColor / detectBoxLifetime
-        val xxx02: Unit = Unit
+        val xxx02 = Unit
 
         SPEC = BUILDER.build()
     }

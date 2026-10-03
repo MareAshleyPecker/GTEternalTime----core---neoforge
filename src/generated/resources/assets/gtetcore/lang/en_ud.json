@@ -19,5 +19,8 @@
   "block.gtetcore.parallel_hatch_iv": ")ןǝןןɐɹɐԀ ᄅƐ( ɥɔʇɐH ןǝןןɐɹɐԀ ΛI",
   "block.gtetcore.test_sync_part": "ʇɹɐԀ ɔuʎS ʇsǝ⟘",
   "gtetcore.machine.overclock_hatch_1024x_saving_max.tooltip.0": "~pooooooob os",
-  "gtetcore.machine.overclock_hatch_4x_lossy4.tooltip.0": "ssǝןǝsn ʎʇʇǝɹd sʞooꞀ"
+  "gtetcore.machine.overclock_hatch_4x_lossy4.tooltip.0": "ssǝןǝsn ʎʇʇǝɹd sʞooꞀ",
+  "item.gtetcore.advanced_terminal": "ןɐuıɯɹǝ⟘ pǝɔuɐʌpⱯq§",
+  "item.gtetcore.advanced_terminal.build.not_controller": "ɹǝןןoɹʇuoɔ ʞɔoןqıʇןnɯ ɐ ʇou sı ʞɔoןq sıɥ⟘",
+  "item.gtetcore.advanced_terminal.build.too_many": ")%s ʇıɯıן( sʞɔoןq %s :pןınq ǝuo ɹoɟ ǝbɹɐן ooʇ sı ǝɹnʇɔnɹʇS"
 }
