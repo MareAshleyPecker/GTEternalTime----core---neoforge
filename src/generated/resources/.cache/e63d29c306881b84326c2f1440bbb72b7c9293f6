@@ -1,4 +1,4 @@
-// 1.21.1	2026-10-03T18:23:53.3617138	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
+// 1.21.1	2026-10-03T18:32:34.1592147	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
 1cbd74ee434d591e54b2844b76391a215a744816 assets/gtetscore/blockstates/overclock_hatch_1024x_saving_max.json
 25043136f3ddc60bd363deeffe3bbf7c7a7bc420 assets/gtetscore/blockstates/overclock_hatch_16x_lossy2.json
 b4a371878227faf8c55434890fffbe4de4d3e60d assets/gtetscore/blockstates/overclock_hatch_16x_lossy4.json
@@ -24,8 +24,8 @@ f39fd722c4d67400b6489880c6741d692f554547 assets/gtetscore/blockstates/tf_hatch_1
 7e1c0512b4b85f1f87b58a784c091d2d39b3a8a7 assets/gtetscore/blockstates/tf_hatch_256h.json
 01776d75f7f5a39585df8c0522b1715f23afd5fc assets/gtetscore/blockstates/tf_hatch_4096h.json
 f120d9d237d0bfc2b3f4ed5313187445a600aa90 assets/gtetscore/blockstates/tf_hatch_64h.json
-340467f66642b41cdbbcc776680dc52b3ff784e5 assets/gtetscore/lang/en_ud.json
-b0eb464be4d1ec338d4507d645880f1034fa449d assets/gtetscore/lang/en_us.json
+f3b22e576045d62358b1e4a333f4d2728304aa02 assets/gtetscore/lang/en_ud.json
+21bdcf89d0765a91a5822fb8270698fcf345cb7e assets/gtetscore/lang/en_us.json
 5fe25e63d035bf18d8a97c6ce9b3a585b0f02a36 assets/gtetscore/models/block/machine/overclock_hatch_1024x_saving_max.json
 095f88489192552bb1ab38094c05d7a85f750db2 assets/gtetscore/models/block/machine/overclock_hatch_16x_lossy2.json
 c8adbe21f7fc72d8eadb84b014ed0c594149c7e0 assets/gtetscore/models/block/machine/overclock_hatch_16x_lossy4.json
@@ -53,6 +53,7 @@ b39a843c78ba1cbc6b7934b6ffddedbfb263c78a assets/gtetscore/models/block/machine/t
 88dc062f6bc5355d8c0fc1e4ecc0437505a5f34d assets/gtetscore/models/block/machine/tf_hatch_64h.json
 ea8d89511e41984637d8ab5eefd2736c5cb89fa3 assets/gtetscore/models/item/advanced_terminal.json
 2dee6ef1ddb1df352cdb4f64650114782551ecab assets/gtetscore/models/item/clock_of_time_sequence.json
+ea8d89511e41984637d8ab5eefd2736c5cb89fa3 assets/gtetscore/models/item/ldlib2_probe.json
 7956028cb2fe221b662ada52f8896b348b789f62 assets/gtetscore/models/item/overclock_hatch_1024x_saving_max.json
 e8bfae4793841c8506e6d0cb9b5e150aa5f019a0 assets/gtetscore/models/item/overclock_hatch_16x_lossy2.json
 7bbb5fedc3a7b14958b7a1967cb6b1ec0144a004 assets/gtetscore/models/item/overclock_hatch_16x_lossy4.json

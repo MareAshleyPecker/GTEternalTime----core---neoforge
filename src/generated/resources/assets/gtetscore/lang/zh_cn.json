@@ -64,6 +64,7 @@
   "item.gtetscore.clock_of_time_sequence": "§b时序钟",
   "item.gtetscore.clock_of_time_sequence.tooltip.carry": "存储时间流（TF）；绑定主控塔后可跨维度搬运",
   "item.gtetscore.clock_of_time_sequence.tooltip.upgrade": "用升级件提升容量档位（L1 → L3），钟内 TF 不丢",
+  "item.gtetscore.ldlib2_probe": "§bLDLib2 冒烟道具",
   "item.gtetscore.time_clock.tip.bound": "时序钟已绑定主控塔：(%s, %s, %s)",
   "item.gtetscore.time_clock.tip.bound_denied": "已绑定主控塔：(%s, %s, %s)，但你不在它的所有者 / 白名单里 —— 扣费会回落到钟内 TF",
   "item.gtetscore.time_clock.tip.bound_tip": "已绑定主控塔：%s",

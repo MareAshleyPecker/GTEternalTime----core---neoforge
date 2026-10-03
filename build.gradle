@@ -169,24 +169,19 @@ dependencies {
     compileOnly files("libs/jarjar/modularui-mc1.21.1-3.3.1-SNAPSHOT.jar")
     compileOnly files("libs/jarjar/configuration-1.21.1-3.1.1-neoforge.jar")
 
-    // 注：GTCEu 8.0.0 已彻底弃用 LDLib/LDLib2（源码里 0 处 com.lowdragmc 引用），
-    //     所以 LDLib2 依赖已移除；UI 改走上面的 MUI，同步改走 gtceu 自研的 api/sync_system。
+    // LDLib2：GTCEu 8.0.0 已弃用它（不再捎带），要用就得自己声明；`:all` 才是带全依赖的 jar。
+    implementation "com.lowdragmc.ldlib2:ldlib2-neoforge-${minecraft_version}:${ldlib2_version}:all"
 
     // ── 阶段 3（可选）：AE2 / Jade 集成 ──
     // compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     // compileOnly "maven.modrinth:jade:${jade_version}"
 
-    // ── 配方查看器：JEI ──
-    // ⚠️ 1.21.1 的坐标是 neoforge（不是 forge，模板里那三行注释是老版本写法，照抄必挂）：
-    //    mezz.jei:jei-1.21.1-common-api / -neoforge-api  → 编译期接口（GTM 的 JEI 插件接口在这两个里）
-    //    mezz.jei:jei-1.21.1-neoforge                    → 运行期本体（dev 的 runClient 会带上它）
-    // 版本与 GTM 8.0.0 的 gradle/forge.versions.toml 对齐（jei = 19.25.1.328）。
+    // ── 配方查看器：JEI（1.21.1 的坐标是 neoforge，不是 forge）──
     compileOnly "mezz.jei:jei-1.21.1-common-api:${jei_version}"
     compileOnly "mezz.jei:jei-1.21.1-neoforge-api:${jei_version}"
     runtimeOnly "mezz.jei:jei-1.21.1-neoforge:${jei_version}"
 
-    // ── 配方查看器：EMI ──
-    // `:api` 分类器是编译期接口，运行期要本体（GTM 同款写法，版本 emi = 1.1.24+1.21.1）。
+    // ── 配方查看器：EMI（`:api` 是编译期接口，运行期要本体）──
     compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
     runtimeOnly "dev.emi:emi-neoforge:${emi_version}"
 

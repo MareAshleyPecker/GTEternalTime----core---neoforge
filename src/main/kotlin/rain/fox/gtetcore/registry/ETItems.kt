@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.common.item.terminal.AdvancedTerminalBehavior
 import rain.fox.gtetcore.common.item.timeflow.TimeClockBehavior
+import rain.fox.gtetcore.test.Ldlib2ProbeItem
 import rain.fox.gtetcore.util.lang.LangUtil
 
 /**
@@ -145,6 +146,25 @@ object ETItems {
                         }
                     )
                 }
+                .register()
+        }
+    }
+
+    /** LDLib2 冒烟道具（S1），S1 过了就删；贴图先借用高级终端那张。 */
+    @JvmField
+    val LDLIB2_PROBE: ItemEntry<Ldlib2ProbeItem> = run {
+        LangUtil.ITEM_LANG["ldlib2_probe"] = "§bLDLib2 冒烟道具"
+
+        ETRegistrate.REGISTRATE.inTab(ETCreativeModeTabs.ITEM) {
+            ETRegistrate.REGISTRATE
+                .item("ldlib2_probe", ::Ldlib2ProbeItem)
+                .lang("§bLDLib2 Probe (S1 smoke)")
+                .properties { properties -> properties.stacksTo(1) }
+                .model { ctx, provider ->
+                    provider.generated(ctx, GTETSCore.id("item/advanced_terminal"))
+                }
+                // 同上：清掉 Registrate 的影子归页（否则开背包重建创造页时会崩）
+                .noDefaultTab()
                 .register()
         }
     }
