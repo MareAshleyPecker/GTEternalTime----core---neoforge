@@ -2,8 +2,6 @@
 
 package rain.fox.gtetcore.client.mui
 
-import brachy.modularui.api.IPacketWriter
-import brachy.modularui.api.ISyncedAction
 import brachy.modularui.api.drawable.IDrawable
 import brachy.modularui.api.drawable.Text
 import brachy.modularui.api.widget.IWidget
@@ -11,9 +9,9 @@ import brachy.modularui.drawable.DynamicDrawable
 import brachy.modularui.drawable.GuiTextures
 import brachy.modularui.drawable.Rectangle
 import brachy.modularui.drawable.UITexture
-import brachy.modularui.utils.Color
 import brachy.modularui.value.BoolValue
 import brachy.modularui.value.sync.BooleanSyncValue
+import brachy.modularui.value.sync.IntSyncValue
 import brachy.modularui.value.sync.PanelSyncManager
 import brachy.modularui.widget.ParentWidget
 import brachy.modularui.widgets.ButtonWidget
@@ -26,21 +24,25 @@ import com.gregtechceu.gtceu.common.machine.trait.AutoOutputTrait
 import com.gregtechceu.gtceu.common.mui.GTGuiTextures
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer
 import net.minecraft.core.Direction
-import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.chat.Component
+import org.apache.logging.log4j.Level as LogLevel
+import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import java.util.function.BooleanSupplier
+import java.util.function.IntConsumer
+import java.util.function.IntSupplier
 import java.util.function.Supplier
 
-/** 配置页的同步动作名（`PanelSyncManager.registerSyncedAction` 的键，加命名空间避免与 GTM 撞）。 */
-private const val ACTION_ITEM = "gtetscore:io_config_item"
-private const val ACTION_FLUID = "gtetscore:io_config_fluid"
-
-/** 四个开关的同步值键；显式命名，免得跟 GTM 塞在右侧配置列里的那几个匿名同名值撞键。 */
+/** 六个同步值键；显式命名，免得跟 GTM 塞在右侧配置列里的那几个匿名同名值撞键。 */
+private const val SYNC_ITEM_FACE = "gtetscore_io_item_face"
+private const val SYNC_FLUID_FACE = "gtetscore_io_fluid_face"
 private const val SYNC_AUTO_ITEM = "gtetscore_io_auto_item"
 private const val SYNC_AUTO_FLUID = "gtetscore_io_auto_fluid"
 private const val SYNC_ALLOW_IN_ITEM = "gtetscore_io_allow_in_item"
 private const val SYNC_ALLOW_IN_FLUID = "gtetscore_io_allow_in_fluid"
+
+/** 「没有输出面」在同步值里的编码（`Direction.ordinal` 用不到它）。 */
+private const val NO_FACE = -1
 
 /** 六面图：格边长、格间距、开关边长。 */
 private const val FACE_CELL_SIZE = 26
@@ -75,12 +77,19 @@ private val FACE_SLOT_ORDER: List<FaceSlot> = listOf(
 private const val GRID_WIDTH = 3 * FACE_CELL_SIZE + 2 * CELL_GAP
 private const val GRID_HEIGHT = 3 * FACE_CELL_SIZE + 2 * CELL_GAP
 
-private val BACKDROP_UNDERLAY: Int = Color.argb(255, 24, 26, 30)
-private val ITEM_FACE_COLOR: Int = Color.argb(255, 60, 220, 90)
-private val FLUID_FACE_COLOR: Int = Color.argb(255, 70, 170, 255)
-private val BOTH_FACE_COLOR: Int = Color.argb(255, 60, 200, 170)
-private val IDLE_FACE_COLOR: Int = Color.argb(255, 58, 62, 70)
-private val CELL_TEXT_COLOR: Int = Color.argb(255, 255, 255, 255)
+/**
+ * 颜色一律写成 `0xAARRGGBB` 字面量。
+ *
+ * ⚠️ MUI 的 `Color.argb(r, g, b, a)` 参数序是 **(r, g, b, a)**（字节码把第 4 个参数左移 24 位当 alpha），
+ * 而 `Color.rgba(a, r, g, b)` 才是 alpha 在前 —— 两个名字跟参数序是反的。写成 `Color.argb(255, r, g, b)`
+ * 会得到一块 r=255 的亮品红（并且 alpha 取到了 b 的值，半透明），别再碰那两个重载。
+ */
+private val BACKDROP_UNDERLAY: Int = 0xFF181A1E.toInt()
+private val ITEM_FACE_COLOR: Int = 0xFF3CDC5A.toInt()
+private val FLUID_FACE_COLOR: Int = 0xFF46AAFF.toInt()
+private val BOTH_FACE_COLOR: Int = 0xFF3CC8AA.toInt()
+private val IDLE_FACE_COLOR: Int = 0xFF3A3E46.toInt()
+private val CELL_TEXT_COLOR: Int = 0xFFFFFFFF.toInt()
 
 /**
  * 「输入输出配置页」的装配点。
@@ -140,7 +149,14 @@ class MachineIoConfigPage(
     private val itemSupported: Boolean = trait.supportsAutoOutputItems()
     private val fluidSupported: Boolean = trait.supportsAutoOutputFluids()
 
-    // 四个开关各一个显式命名的 C2S 同步值（setter 只在服务端跑）
+    // 四个开关 + 两条「输出面」各一个显式命名的 C2S 同步值（setter 只在服务端跑）。
+    // ⚠️ 输出面**不再走** registerSyncedAction/callSyncedAction：那条路实机点不动（见 S1.8 报告），
+    //    这里改用 MUI 通用的同步值通道，和下面四个开关同一条路。
+    private val itemFaceSync = faceSync(SYNC_ITEM_FACE, { trait.itemOutputDirection },
+        { trait.setItemOutputDirection(it) })
+    private val fluidFaceSync = faceSync(SYNC_FLUID_FACE, { trait.fluidOutputDirection },
+        { trait.setFluidOutputDirection(it) })
+
     private val autoItemSync = boolSync(SYNC_AUTO_ITEM, { trait.isAutoOutputItems() },
         { trait.setAllowAutoOutputItems(it) })
     private val autoFluidSync = boolSync(SYNC_AUTO_FLUID, { trait.isAutoOutputFluids() },
@@ -161,16 +177,6 @@ class MachineIoConfigPage(
         // 不透明底：Rectangle 兜底铺满，GT 的背景图叠在上面
         child(IDrawable.DrawableWidget(Rectangle().color(BACKDROP_UNDERLAY).solid()).sizeRel(1f))
         child(IDrawable.DrawableWidget(GTGuiTextures.BACKGROUND).sizeRel(1f))
-
-        // C2S：executeClient=false / executeServer=true，与 GTMuiWidgets.java:212 同一组参数。
-        if (itemSupported) {
-            syncManager.registerSyncedAction(ACTION_ITEM, false, true,
-                ISyncedAction { buf -> applyDirection(buf, true) })
-        }
-        if (fluidSupported) {
-            syncManager.registerSyncedAction(ACTION_FLUID, false, true,
-                ISyncedAction { buf -> applyDirection(buf, false) })
-        }
 
         child(
             Flow.col()
@@ -229,16 +235,17 @@ class MachineIoConfigPage(
             }
             .onMousePressed { _, button ->
                 when (button) {
-                    0 -> sendDirection(face, true)
-                    1 -> sendDirection(face, false)
+                    0 -> setOutputFace(face, true)
+                    1 -> setOutputFace(face, false)
                 }
                 true
             }
     }
 
+    /** 底色读的是同步值（客户端拿到的是服务端值；自己点完那一刻是本地乐观值），所以点完立刻变色。 */
     private fun faceCellColor(face: Direction): Int {
-        val items = itemSupported && trait.itemOutputDirection == face
-        val fluids = fluidSupported && trait.fluidOutputDirection == face
+        val items = itemSupported && itemFaceSync.intValue == face.ordinal
+        val fluids = fluidSupported && fluidFaceSync.intValue == face.ordinal
         return when {
             items && fluids -> BOTH_FACE_COLOR
             items -> ITEM_FACE_COLOR
@@ -334,29 +341,37 @@ class MachineIoConfigPage(
         return value
     }
 
-    // ======================== 点面设 I/O ========================
-
-    private fun sendDirection(face: Direction, items: Boolean): Boolean {
-        if (items) {
-            if (!itemSupported) return false
-            // 传的是 `Direction.ordinal`（枚举协议序），不是六面图的显示下标
-            syncManager.callSyncedAction(ACTION_ITEM,
-                IPacketWriter<RegistryFriendlyByteBuf> { buf -> buf.writeVarInt(face.ordinal) })
-        } else {
-            if (!fluidSupported) return false
-            syncManager.callSyncedAction(ACTION_FLUID,
-                IPacketWriter<RegistryFriendlyByteBuf> { buf -> buf.writeVarInt(face.ordinal) })
-        }
-        return true
+    /**
+     * 输出面用的 C2S 同步值：`Direction.ordinal` 编进去，没有输出面时用 [NO_FACE]。
+     *
+     * `.allowC2S()` 的含义是 setter **只在服务端**跑（客户端点一下只是把本地值发过去），
+     * 服务端 `setItemOutputDirection / setFluidOutputDirection` 的校验（正面、validator）照旧生效，
+     * 被拒时下一次同步会把客户端的乐观值改回来。
+     */
+    private fun faceSync(key: String, read: () -> Direction?, write: (Direction) -> Unit): IntSyncValue {
+        // ⚠️ 同样要显式写 SAM 类型，否则撞上 (IntSupplier, IntSupplier) 的重载
+        val value = IntSyncValue(
+            IntSupplier { read()?.ordinal ?: NO_FACE },
+            IntConsumer { ordinal ->
+                // TODO(临时诊断 S1.8)：确认服务端有没有收到这个同步值之后删掉
+                GTETSCore.LOGGER.log(LogLevel.INFO, "[GTET-TEST] io page server apply: key={} ordinal={}", key, ordinal)
+                faceOf(ordinal)?.let(write)
+            }
+        ).allowC2S()
+        syncManager.syncValue(key, value)
+        return value
     }
 
-    /** 服务端执行体；方向与开关都落在 trait 自己的同步字段上（AutoOutputTrait.java:61-91）。 */
-    private fun applyDirection(buf: RegistryFriendlyByteBuf, items: Boolean) {
-        val ordinal = buf.readVarInt()
-        val faces = Direction.entries.toTypedArray()
-        if (ordinal < 0 || ordinal >= faces.size) return
-        val face = faces[ordinal]
-        if (items) trait.setItemOutputDirection(face) else trait.setFluidOutputDirection(face)
+    // ======================== 点面设 I/O ========================
+
+    private fun setOutputFace(face: Direction, items: Boolean) {
+        // TODO(临时诊断 S1.8)：确认「点面」到底有没有送到这里之后删掉
+        GTETSCore.LOGGER.log(LogLevel.INFO, "[GTET-TEST] io page click: face={} items={}", face, items)
+        if (items) {
+            if (itemSupported) itemFaceSync.intValue = face.ordinal
+        } else {
+            if (fluidSupported) fluidFaceSync.intValue = face.ordinal
+        }
     }
 
     // ======================== 状态行 ========================
@@ -367,7 +382,7 @@ class MachineIoConfigPage(
             lines.add(
                 Component.translatable(
                     MachineIoConfigLang.FACE_ITEM,
-                    directionName(trait.itemOutputDirection)
+                    directionName(faceOf(itemFaceSync.intValue))
                 )
             )
         }
@@ -375,7 +390,7 @@ class MachineIoConfigPage(
             lines.add(
                 Component.translatable(
                     MachineIoConfigLang.FACE_FLUID,
-                    directionName(trait.fluidOutputDirection)
+                    directionName(faceOf(fluidFaceSync.intValue))
                 )
             )
         }
@@ -411,4 +426,10 @@ private enum class FaceSlot(val langKey: String, val shortKey: String) {
     BOTTOM(MachineIoConfigLang.REL_BOTTOM, MachineIoConfigLang.REL_BOTTOM_SHORT),
     LEFT(MachineIoConfigLang.REL_LEFT, MachineIoConfigLang.REL_LEFT_SHORT),
     RIGHT(MachineIoConfigLang.REL_RIGHT, MachineIoConfigLang.REL_RIGHT_SHORT)
+}
+
+/** 同步值里的 `Direction.ordinal` 还原；[NO_FACE] 或越界都返回 null。 */
+private fun faceOf(ordinal: Int): Direction? {
+    val faces = Direction.entries.toTypedArray()
+    return if (ordinal < 0 || ordinal >= faces.size) null else faces[ordinal]
 }
