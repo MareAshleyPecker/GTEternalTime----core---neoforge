@@ -1,23 +1,31 @@
 package rain.fox.gtetcore.client.mui
 
 import brachy.modularui.api.widget.IWidget
+import brachy.modularui.drawable.GuiTextures
 import brachy.modularui.drawable.Rectangle
 import brachy.modularui.overlay.OverlayStack
 import brachy.modularui.screen.ModularPanel
 import brachy.modularui.screen.ModularScreen
 import brachy.modularui.screen.viewport.ModularGuiContext
+import brachy.modularui.utils.Alignment
 import brachy.modularui.utils.Color
 import brachy.modularui.widget.ParentWidget
 import brachy.modularui.widget.Widget
 import brachy.modularui.widgets.ItemDisplayWidget
+import brachy.modularui.widgets.TextWidget
 import brachy.modularui.widgets.layout.Flow
 import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition
+import com.gregtechceu.gtceu.api.machine.multiblock.MultiblockControllerMachine
+import com.gregtechceu.gtceu.api.registry.GTRegistries
 import com.gregtechceu.gtceu.integration.recipeviewer.widgets.MultiblockPreviewWidget
 import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 import org.apache.logging.log4j.Level
 import org.lwjgl.glfw.GLFW
 import rain.fox.gtetcore.GTETSCore
+import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
+import java.util.Comparator
 
 /**
  * 多方块 3D 预览的全屏化。
@@ -132,19 +140,113 @@ private fun buildFullscreenPanel(definition: MultiblockMachineDefinition,
     val window = Minecraft.getInstance().window
     val width = window.guiScaledWidth
     val height = window.guiScaledHeight
-    val preview = createPreview(
-        definition,
-        (width - PREVIEW_MARGIN_X).coerceAtLeast(MIN_PREVIEW_SIZE),
-        (height - PREVIEW_MARGIN_Y).coerceAtLeast(MIN_PREVIEW_SIZE)
-    )
     // 尺寸写死在窗口像素上（不靠 sizeRel(1f)，见 onResize 注释），遮罩才真正铺满
     val panel = FullscreenPanel().size(width, height).background(Rectangle().color(BACKDROP_COLOR))
-    panel.child(preview.center())
-    // 左下角：这台机器需要多少方块；右下角：退出 / 重置
-    panel.child(buildPartsColumn(preview).left(4).bottom(4))
-    panel.child(PreviewControls.createRow(preview, definition, true).right(4).bottom(4))
+    FullscreenSwitcher(panel, width, height, definition).build()
     return panel
 }
+
+/**
+ * 全屏内容：3D 铺满 + 左下部件数 + 右下按钮（含「上一个 / 下一个」），并负责切换多方块。
+ *
+ * <p>候选来自 GTM 注册表**只读枚举**（`GTRegistries.MACHINES`，与 `MultiblockInfoJeiCategory.registerRecipes`
+ * 同一套筛选），按 id 排序 ⇒ 顺序稳定、不硬编码清单；`isRenderXEIPreview` 为假的（GTM 自己不给预览的）以及
+ * 拿不到 `main` 图案的定义会被过滤掉。切换时重建预览控件（取景由 `PreviewCameraFit` 按新结构重算）与左下部件数列表。
+ */
+private class FullscreenSwitcher(
+    private val panel: ModularPanel<*>,
+    private val width: Int,
+    private val height: Int,
+    private var definition: MultiblockMachineDefinition
+) {
+
+    private val candidates: List<MultiblockMachineDefinition> = multiblockCandidates()
+    private var index: Int = candidates.indexOf(definition).coerceAtLeast(0)
+    private var preview: MultiblockPreviewWidget? = null
+    private var parts: IWidget? = null
+    private var label: IWidget? = null
+    private var row: IWidget? = null
+
+    fun build() {
+        apply(definition)
+    }
+
+    private fun cycle(delta: Int) {
+        if (candidates.size < 2) return
+        index = (index + delta + candidates.size) % candidates.size
+        apply(candidates[index])
+    }
+
+    /** 换一份预览：先把旧的从面板摘掉再挂新的（MUI 支持运行时增删子件，`DynamicWidget.updateChild` 就是这套）。 */
+    private fun apply(target: MultiblockMachineDefinition) {
+        try {
+            preview?.let { panel.remove(it) }
+            parts?.let { panel.remove(it) }
+            label?.let { panel.remove(it) }
+            row?.let { panel.remove(it) }
+
+            definition = target
+            index = candidates.indexOf(target).coerceAtLeast(0)
+            val newPreview = createPreview(
+                target,
+                (width - PREVIEW_MARGIN_X).coerceAtLeast(MIN_PREVIEW_SIZE),
+                (height - PREVIEW_MARGIN_Y).coerceAtLeast(MIN_PREVIEW_SIZE)
+            )
+            val newRow = PreviewControls.createRow(newPreview, target, true)
+            if (candidates.size >= 2) {
+                // 箭头按钮必须**每次重建**：`AbstractParentWidget.remove` 会 dispose 被摘掉的子树
+                // （`remove(I)` 在父有效时调 `IWidget.dispose()`，`Widget.dispose` 递归 dispose 子件），
+                // 复用同一对按钮 ⇒ 第二次切换时挂进去的是已 dispose、valid=false 的控件，既不再绘制也点不动。
+                // IParentWidget.child 的参数顺序是 (index, widget)
+                newRow.child(0, PreviewControls.arrowButton(GuiTextures.MOVE_LEFT,
+                    MultiblockPreviewLang.BUTTON_PREV) { cycle(-1) })
+                newRow.child(1, PreviewControls.arrowButton(GuiTextures.MOVE_RIGHT,
+                    MultiblockPreviewLang.BUTTON_NEXT) { cycle(+1) })
+            }
+            val newParts = buildPartsColumn(newPreview).left(4).bottom(4)
+            val newLabel = TextWidget(nameOf(target))
+                .size(LABEL_WIDTH, LABEL_HEIGHT)
+                .textAlign(Alignment.CenterLeft)
+                .left(4).top(4)
+
+            preview = newPreview
+            parts = newParts
+            row = newRow
+            label = newLabel
+            panel.child(newPreview.center())
+            panel.child(newParts)
+            panel.child(newLabel)
+            panel.child(newRow.right(4).bottom(4))
+        } catch (t: Throwable) {
+            GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 切换全屏多方块预览失败", t)
+        }
+    }
+
+    private fun nameOf(target: MultiblockMachineDefinition): Component {
+        // langValue 在 GT/GTM 侧是 @Nullable，缺失时退回注册名，避免出现 "null" 文本
+        val name = Component.translatable(target.langValue ?: target.id.toString())
+        return if (candidates.size < 2) {
+            name
+        } else {
+            Component.translatable(MultiblockPreviewLang.LABEL_INDEX,
+                name, (index + 1).toString(), candidates.size.toString())
+        }
+    }
+}
+
+/** 只读枚举：GTM 注册表里的多方块，按 id 排序（顺序稳定）。 */
+private fun multiblockCandidates(): List<MultiblockMachineDefinition> =
+    try {
+        GTRegistries.MACHINES.stream()
+            .filter { it is MultiblockMachineDefinition }
+            .map { it as MultiblockMachineDefinition }
+            .filter { it.isRenderXEIPreview }
+            .filter { it.structurePatterns.containsKey(MultiblockControllerMachine.DEFAULT_STRUCTURE) }
+            .sorted(Comparator.comparing { d -> d.id.toString() })
+            .toList()
+    } catch (t: Throwable) {
+        emptyList()
+    }
 
 private fun createPreview(definition: MultiblockMachineDefinition, width: Int, height: Int): MultiblockPreviewWidget {
     PreviewControls.beginFullscreen()
@@ -154,7 +256,8 @@ private fun createPreview(definition: MultiblockMachineDefinition, width: Int, h
         // 全屏只要「整屏 3D + 左下部件数 + 右下按钮」：
         // 滑条列（slice 重复 / 谓词菜单）与自带部件列从这里摘掉/压掉，3D 才能铺满整屏。
         // 部件列 `parts_view` 是带 DynamicHandler 的控件，**不 remove**（它的 handler 已挂监听，
-        // 摘出树后 GTM 刷新时会在游离控件上 updateChild），改成 1px + invisible。
+        // 摘出树后 GTM 刷新时会在游离控件上 updateChild），改成 1px（MUI 的 `Widget.invisible()`
+        // 只关掉主题/悬停背景，缩到 1px 才是让它画不出内容的那一步）。
         removeChild(preview, "structure_patterns")
         shrinkChild(preview, "parts_view")
         // `SchemaRenderer.rayTracing` 构造器里默认 false（javap：`SchemaRenderer.<init>` iconst_0 → putfield），
@@ -193,7 +296,7 @@ private fun removeChild(root: IWidget, name: String): Boolean {
     return parent.children.any { removeChild(it, name) }
 }
 
-/** 不摘出树、只压成 1px 且不绘制（给带 handler 的 DynamicWidget 用）。 */
+/** 不摘出树（handler 还挂在屏上），只压成 1px；`invisible()` 关的是主题/悬停背景。 */
 private fun shrinkChild(root: IWidget, name: String): Boolean {
     val parent = root as? ParentWidget<*> ?: return false
     val child = parent.children.firstOrNull { it.name == name }
@@ -217,6 +320,10 @@ private const val PARTS_NAME = "gtetscore_fullscreen_parts"
 private const val PREVIEW_MARGIN_X = 50
 private const val PREVIEW_MARGIN_Y = 30
 private const val MIN_PREVIEW_SIZE = 120
+
+/** 左上角那行「名字（序号/总数）」。 */
+private const val LABEL_WIDTH = 420
+private const val LABEL_HEIGHT = 12
 
 /** 灰色半透明底（ARGB）：0.85 让底下的 JEI / EMI 只剩隐约轮廓，才像"铺满的一层"。 */
 private val BACKDROP_COLOR: Int = Color.withAlpha(Color.rgb(128, 128, 128), 0.85f)

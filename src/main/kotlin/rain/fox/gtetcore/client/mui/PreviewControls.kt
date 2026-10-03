@@ -2,7 +2,9 @@ package rain.fox.gtetcore.client.mui
 
 import brachy.modularui.api.drawable.IDrawable
 import brachy.modularui.api.drawable.Text
+import brachy.modularui.api.widget.IWidget
 import brachy.modularui.drawable.GuiTextures
+import brachy.modularui.widget.ParentWidget
 import brachy.modularui.widgets.ButtonWidget
 import brachy.modularui.widgets.layout.Flow
 import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition
@@ -43,16 +45,18 @@ object PreviewControls {
     }
 
     /**
-     * 挂按钮条（**只挂内嵌那份**）；失败不能连带 GTM 自己的预览控件打不开。
+     * 挂按钮条（**只挂内嵌那份**）+ 把内嵌的 3D 换成提示文字；失败不能连带 GTM 自己的预览控件打不开。
      *
-     * `schemaWidth` = `MultiblockPreviewWidget` 构造器第 3 个参数，也就是 3D 控件自己的宽度
-     * （`MultiblockPreviewWidget.java:192` 的 `.size(width, height)`），拿它算绝对坐标。
+     * `schemaWidth` / `schemaHeight` = `MultiblockPreviewWidget` 构造器第 3、4 个参数，也就是 3D 控件自己的尺寸
+     * （`MultiblockPreviewWidget.java:192` 的 `.size(width, height)`）。
      */
     @JvmStatic
-    fun attach(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition, schemaWidth: Int) {
-        // 全屏那份的按钮由 buildFullscreenPanel 直接钉在面板右下角，不挂进控件树
+    fun attach(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition,
+               schemaWidth: Int, schemaHeight: Int) {
+        // 全屏那份的按钮由 buildFullscreenPanel 直接钉在面板右下角、3D 也照常显示，这里不碰
         if (fullscreen) return
         try {
+            showFullscreenHint(preview, schemaWidth, schemaHeight)
             val row = createRow(preview, definition, false)
             // 只给像素制的 left/top：right(int) / rightRel(float) 都要先知道父级宽度，而父级是
             // `coverChildren()`（宽度反过来由子件撑出），是循环依赖 —— MUI 会先按未解析值摆一次，父级可能被撑大；
@@ -64,6 +68,29 @@ object PreviewControls {
         } catch (t: Throwable) {
             GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 挂载多方块预览控制按钮失败", t)
         }
+    }
+
+    /**
+     * 内嵌页不再显示 3D（配方查看器里的绝对视口错位不修了），把 SchemaWidget 从树里摘掉、原位放一行居中提示。
+     *
+     * <p>SchemaWidget 是普通控件、不带 handler，摘掉安全（与全屏那边 `parts_view` 的情况不同）。
+     */
+    private fun showFullscreenHint(preview: MultiblockPreviewWidget, schemaWidth: Int, schemaHeight: Int) {
+        val schema = preview.multiblockSchemaInfo?.multiSchema ?: return
+        val parent = schema.parent as? ParentWidget<*> ?: return
+        val index = parent.children.indexOf(schema)
+        val parentValid = parent.isValid()
+        // 摘掉的是**尚未 validate** 的子树（本函数跑在 MultiblockPreviewWidget 构造器里），
+        // 而 `AbstractParentWidget.remove` 只在父 `isValid()` 时才 dispose 被摘的子件 —— 这里补一次：
+        // `SchemaWidget.dispose` 会调 `SchemaRenderer.dispose`（cancelCompilation + clearBuffer + discardAll），
+        // GTM 自己从不 dispose 这个 renderer（全 jar 里没有同时引用 dispose 与 SchemaRenderer 的类），
+        // 不补就会每次打开信息页漏一份 renderer 资源。
+        if (!parent.remove(schema)) return
+        if (!parentValid) schema.dispose()
+        val hint = IDrawable.DrawableWidget(Text.lang(MultiblockPreviewLang.HINT_FULLSCREEN).asIcon().center())
+            .size(schemaWidth, schemaHeight)
+            .tooltip { r -> r.addLine(Text.lang(MultiblockPreviewLang.HINT_FULLSCREEN)) }
+        if (index >= 0) parent.addChild(hint, index) else parent.child(hint)
     }
 
     /** 按钮条本体；位置由调用方定（内嵌=控件右上角，全屏=面板右下角）。 */
@@ -81,14 +108,21 @@ object PreviewControls {
                 }
             )
         }
-        row.child(
-            iconButton(GuiTextures.REFRESH, MultiblockPreviewLang.BUTTON_RESET_VIEW) {
-                val info = preview.multiblockSchemaInfo
-                PreviewCameraFit.reset(info?.multiSchema, info?.mapSchema)
-            }
-        )
+        // 内嵌页已经不放 3D 了，「重置视角」没有对象 ⇒ 只留在全屏那排
+        if (fullscreen) {
+            row.child(
+                iconButton(GuiTextures.REFRESH, MultiblockPreviewLang.BUTTON_RESET_VIEW) {
+                    val info = preview.multiblockSchemaInfo
+                    PreviewCameraFit.reset(info?.multiSchema, info?.mapSchema)
+                }
+            )
+        }
         return row
     }
+
+    /** 给全屏的「上一个 / 下一个」用（同一个图标按钮壳）。 */
+    fun arrowButton(icon: IDrawable, tooltipKey: String, action: () -> Unit): IWidget =
+        iconButton(icon, tooltipKey, action)
 
     private fun iconButton(icon: IDrawable, tooltipKey: String, action: () -> Unit): PreviewButton =
         PreviewButton()
