@@ -4,10 +4,15 @@ import com.gregtechceu.gtceu.api.item.ComponentItem
 import com.gregtechceu.gtceu.common.item.behavior.TooltipBehavior
 import com.tterrag.registrate.util.entry.ItemEntry
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.common.item.terminal.AdvancedTerminalBehavior
 import rain.fox.gtetcore.common.item.timeflow.TimeClockBehavior
+import rain.fox.gtetcore.common.item.tool.StructureDetectBehavior
+import rain.fox.gtetcore.common.item.tool.StructureWriteBehavior
+import rain.fox.gtetcore.common.item.tool.TerminalBehavior
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
+import rain.fox.gtetcore.data.lang.StructureToolLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.test.Ldlib2ProbeItem
 import rain.fox.gtetcore.util.lang.LangUtil
@@ -90,6 +95,92 @@ object ETItems {
                         TooltipBehavior { lines ->
                             lines.add(Component.translatable(TimeClockLang.TOOLTIP_CARRY))
                             lines.add(Component.translatable(TimeClockLang.TOOLTIP_UPGRADE))
+                        }
+                    )
+                }
+                .register()
+        }
+    }
+
+    /**
+     * 结构工具 — 右键方块选区（第一下钉住起点，之后每次挪对角终点），潜行右键清除，右键空气开导出面板。
+     *
+     * 交互与导出在 [StructureWriteBehavior]，面板在 `client/mui/StructureExportPanel`；
+     * 贴图沿用原版木棍（老工程三件工具都是 `minecraft:item/stick` 的 generated 模型，不新增素材）。
+     */
+    @JvmField
+    val STRUCTURE_TOOLS: ItemEntry<ComponentItem> = run {
+        LangUtil.ITEM_LANG["structure_tools"] = "结构工具"
+
+        ETRegistrate.REGISTRATE.inTab(ETCreativeModeTabs.ITEM) {
+            ETRegistrate.REGISTRATE
+                .item("structure_tools", ::ComponentItem)
+                .noDefaultTab()
+                .lang("Structure Tool")
+                .properties { properties -> properties.stacksTo(1) }
+                .model { ctx, provider ->
+                    provider.generated(ctx, ResourceLocation.withDefaultNamespace("item/stick"))
+                }
+                .onRegister { item ->
+                    item.attachComponents(
+                        StructureWriteBehavior,
+                        TooltipBehavior { lines ->
+                            lines.add(Component.translatable(StructureToolLang.TOOLTIP_SELECT))
+                            lines.add(Component.translatable(StructureToolLang.TOOLTIP_CLEAR))
+                            lines.add(Component.translatable(StructureToolLang.TOOLTIP_OPEN_PANEL))
+                        }
+                    )
+                }
+                .register()
+        }
+    }
+
+    /** 结构刷新工具 — 潜行右键多方块控制器强制重检（[TerminalBehavior]）。 */
+    @JvmField
+    val STRUCTURE_CHECKER: ItemEntry<ComponentItem> = run {
+        LangUtil.ITEM_LANG["structure_checker"] = "结构刷新工具"
+
+        ETRegistrate.REGISTRATE.inTab(ETCreativeModeTabs.ITEM) {
+            ETRegistrate.REGISTRATE
+                .item("structure_checker", ::ComponentItem)
+                .noDefaultTab()
+                .lang("Structure Recheck Tool")
+                .properties { properties -> properties.stacksTo(1) }
+                .model { ctx, provider ->
+                    provider.generated(ctx, ResourceLocation.withDefaultNamespace("item/stick"))
+                }
+                .onRegister { item ->
+                    item.attachComponents(
+                        TerminalBehavior,
+                        TooltipBehavior { lines ->
+                            lines.add(Component.translatable(StructureToolLang.TOOLTIP_RECHECK))
+                        }
+                    )
+                }
+                .register()
+        }
+    }
+
+    /** 结构检测工具 — 右键多方块控制器当场跑一遍结构检测，错误位置画线框（[StructureDetectBehavior]）。 */
+    @JvmField
+    val STRUCTURE_DETECT: ItemEntry<ComponentItem> = run {
+        LangUtil.ITEM_LANG["structure_detect"] = "结构检测工具"
+
+        ETRegistrate.REGISTRATE.inTab(ETCreativeModeTabs.ITEM) {
+            ETRegistrate.REGISTRATE
+                .item("structure_detect", ::ComponentItem)
+                .noDefaultTab()
+                .lang("Structure Detect Tool")
+                .properties { properties -> properties.stacksTo(1) }
+                .model { ctx, provider ->
+                    provider.generated(ctx, ResourceLocation.withDefaultNamespace("item/stick"))
+                }
+                .onRegister { item ->
+                    item.attachComponents(
+                        StructureDetectBehavior,
+                        TooltipBehavior { lines ->
+                            lines.add(Component.translatable(StructureToolLang.TOOLTIP_DETECT_1))
+                            lines.add(Component.translatable(StructureToolLang.TOOLTIP_DETECT_2))
                         }
                     )
                 }

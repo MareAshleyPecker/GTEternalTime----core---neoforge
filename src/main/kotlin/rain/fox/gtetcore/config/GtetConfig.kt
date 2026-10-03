@@ -48,6 +48,24 @@ object GtetConfig {
     /** 主控塔白名单（逗号分隔的 UUID）；空串 = 只有所有者能取用。 */
     const val default_tower_whitelist: String = ""
 
+    /** 结构导出工作模式是否启用（老工程默认 true）。 */
+    const val default_export_mode_enabled: Boolean = true
+
+    /** 结构导出文件的输出目录（相对游戏目录）。 */
+    const val default_export_directory: String = "GtetExport/multiblock"
+
+    /** 选区覆盖层颜色：`R;G;B;线透明度;填充透明度`。 */
+    const val default_write_overlay_color: String = "0.2;0.9;0.2;1.0;0.15"
+
+    /** 结构检测错误位置的颜色：`R;G;B;透明度`。 */
+    const val default_detect_overlay_color: String = "0.2;0.4;1.0;1.0"
+
+    /** 结构检测错误框的停留时间（秒）；0 = 不自动消失。 */
+    const val default_detect_box_lifetime: Int = 10
+
+    /** 无线能源仓空转时允许预充的缓冲量，单位是「本档一 tick 的通过上限（V×安培）」的倍数。 */
+    const val default_wireless_idle_buffer_ticks: Int = 5
+
     private val builder: ModConfigSpec.Builder = ModConfigSpec.Builder()
 
     val send_form_error_message: ModConfigSpec.BooleanValue
@@ -63,9 +81,19 @@ object GtetConfig {
     val tower_max_segments: ModConfigSpec.IntValue
     val tower_whitelist: ModConfigSpec.ConfigValue<String>
 
+    val wireless_idle_buffer_ticks: ModConfigSpec.IntValue
+
+    val export_mode_enabled: ModConfigSpec.BooleanValue
+    val export_directory: ModConfigSpec.ConfigValue<String>
+
+    val write_overlay_color: ModConfigSpec.ConfigValue<String>
+    val detect_overlay_color: ModConfigSpec.ConfigValue<String>
+    val detect_box_lifetime: ModConfigSpec.IntValue
+
     val spec: ModConfigSpec
 
     init {
+
         builder.comment("多方块结构检测相关（时间单位：tick）", "Multiblock structure checks (in ticks)")
             .push("multiblock")
 
@@ -79,6 +107,7 @@ object GtetConfig {
         ).define("partsShareable", default_parts_shareable)
 
         builder.pop()
+        /* --------------------------------------------------------------------------------------- */
 
         // ── 时间流（TF）：单位、时序潮汐与系数 ──
         // 老项目 TOML 里的键名原样保留：tideAmplitude / tidePeriod / overclockFactorK / timeClockHandFactor。
@@ -145,11 +174,70 @@ object GtetConfig {
 
         builder.pop()
 
-        // ── 以下分类尚未移植，先留编号占位（xxx0 / xxx02 …），轮到对应功能时按序填入 ──
-        // xxx0 = dev（开发者选项）：exportModeEnabled / exportDirectory / recipeExportDirectory / SendThreadDiagnosticlog
-        val xxx0 = Unit
-        // xxx02 = overlay（结构工具覆盖层）：writeColor / detectColor / detectBoxLifetime
-        val xxx02 = Unit
+        /* --------------------------------------------------------------------------------------- */
+
+        // ── 无线能源仓 ──
+        builder.comment("无线能源仓", "Wireless energy hatch").push("wirelessEnergyHatch")
+
+        wireless_idle_buffer_ticks = builder.comment(
+            "空转（多方块没在跑配方）时允许预充的缓冲量，单位是「本档一 tick 的通过上限（V×安培）」的倍数。",
+            "机器在跑时不看这条，会一路攒到满仓；0 = 空转时一点电都不预充。",
+            "How many ticks' worth of EU the buffer may pre-charge while the multiblock is idle.",
+            "0 = never pre-charge while idle; the machine fills the buffer to full while it is running."
+        ).defineInRange("idleBufferTicks", default_wireless_idle_buffer_ticks, 0, 10_000)
+
+        builder.pop()
+
+        /* --------------------------------------------------------------------------------------- */
+
+        // ── dev：结构导出（老工程 [dev] 段的键名与默认值一字不差）──
+        // ⚠️ 老工程 [dev] 段里另有 recipeExportDirectory（配方编辑器切片）与 SendThreadDiagnosticlog（线程诊断），
+        //    那两项不属于本切片，没有搬过来。
+        builder.comment("开发者选项", "Developer options").push("dev")
+
+        export_mode_enabled = builder.comment(
+            "是否启用结构导出工作模式；关闭后结构工具导出面板上的 Export 按钮只提示、不写文件。",
+            "Whether exporting block patterns from the structure tool is enabled."
+        ).define("exportModeEnabled", default_export_mode_enabled)
+
+        export_directory = builder.comment(
+            "结构导出文件的输出目录（相对游戏目录）。",
+            "Output directory for exported block patterns (relative to the game directory)."
+        ).define("exportDirectory", default_export_directory)
+
+        builder.pop()
+
+        /* --------------------------------------------------------------------------------------- */
+        
+        // ── overlay：结构工具覆盖层（颜色与检测框停留时间）──
+        builder.comment(
+            "结构工具覆盖层：颜色与检测框停留时间（只在客户端渲染时用）",
+            "Structure tool overlay: colors and detect box lifetime (client-side rendering only)"
+        ).push("overlay")
+
+        write_overlay_color = builder.comment(
+            "选区导出：线框 + 半透明填充的颜色。一行写完，格式 R;G;B，",
+            "后面可再按顺序跟「线透明度;填充透明度」，例如 0.2;0.9;0.2;1.0;0.15。",
+            "分量取值 0~1，用分号或逗号分隔；写错的颜色会退回默认值并在日志里提醒。",
+            "Export selection: wireframe + translucent fill color, one line as R;G;B",
+            "optionally followed by lineAlpha;fillAlpha (e.g. 0.2;0.9;0.2;1.0;0.15)."
+        ).define("writeColor", default_write_overlay_color)
+
+        detect_overlay_color = builder.comment(
+            "结构检测失败的位置：线框颜色。一行写完，格式 R;G;B，后面可再跟透明度，",
+            "例如 0.2;0.4;1.0;1.0。分量取值 0~1，用分号或逗号分隔。",
+            "Failed pattern positions: wireframe color, one line as R;G;B",
+            "optionally followed by alpha (e.g. 0.2;0.4;1.0;1.0)."
+        ).define("detectColor", default_detect_overlay_color)
+
+        detect_box_lifetime = builder.comment(
+            "结构检测标出的错误位置：线框显示多少秒后自动消失（单位：秒）。",
+            "填 0 表示不自动消失，一直留到下一次检测为止。",
+            "Seconds the detected error boxes stay visible before disappearing.",
+            "0 keeps them until the next check."
+        ).defineInRange("detectBoxLifetime", default_detect_box_lifetime, 0, 3600)
+
+        builder.pop()
 
         spec = builder.build()
     }
@@ -192,6 +280,26 @@ object GtetConfig {
 
     /** 主控塔白名单原文（逗号分隔的 UUID），默认空串。 */
     fun towerWhitelist(): String = stringValue(tower_whitelist, default_tower_whitelist)
+
+    /** 无线能源仓空转时允许预充的倍数（× 本档一 tick 的通过上限）。 */
+    fun wirelessIdleBufferTicks(): Int = intValue(wireless_idle_buffer_ticks, default_wireless_idle_buffer_ticks)
+
+    // ---- 结构工具（dev / overlay）----
+
+    /** 结构导出是否启用；默认 true。 */
+    fun exportModeEnabled(): Boolean = booleanValue(export_mode_enabled, default_export_mode_enabled)
+
+    /** 结构导出的输出目录（相对游戏目录），默认 `GtetExport/multiblock`。 */
+    fun exportDirectory(): String = stringValue(export_directory, default_export_directory)
+
+    /** 选区覆盖层颜色串（`R;G;B[;线透明度;填充透明度]`）。 */
+    fun writeOverlayColor(): String = stringValue(write_overlay_color, default_write_overlay_color)
+
+    /** 结构检测错误位置的颜色串（`R;G;B[;透明度]`）。 */
+    fun detectOverlayColor(): String = stringValue(detect_overlay_color, default_detect_overlay_color)
+
+    /** 结构检测错误框的停留时间（秒）；0 表示不自动消失。 */
+    fun detectBoxLifetime(): Int = intValue(detect_box_lifetime, default_detect_box_lifetime)
 
     private fun intValue(value: ModConfigSpec.IntValue, fallback: Int): Int =
         if (spec.isLoaded) value.get() else fallback

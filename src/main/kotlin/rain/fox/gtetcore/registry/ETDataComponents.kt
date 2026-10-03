@@ -10,6 +10,8 @@ import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.common.item.terminal.AdvancedTerminalSettings
 import rain.fox.gtetcore.common.item.terminal.TerminalData
 import rain.fox.gtetcore.common.item.timeflow.TimeClockState
+import rain.fox.gtetcore.common.item.tool.StructureDetectData
+import rain.fox.gtetcore.common.item.tool.StructureWriterData
 import java.util.function.Supplier
 
 /**
@@ -71,6 +73,32 @@ object ETDataComponents {
             DataComponentType.builder<Long>()
                 .persistent(Codec.LONG)
                 .networkSynchronized(ByteBufCodecs.VAR_LONG)
+                .build()
+        })
+
+    /**
+     * 结构工具（`structure_tools`）的选区与朝向（老工程物品 NBT 的 `structure_writer` 子树）。
+     * 必须 `networkSynchronized` —— 选区的半透明立方体是客户端画的。
+     */
+    @JvmField
+    val STRUCTURE_WRITER: DeferredHolder<DataComponentType<*>, DataComponentType<StructureWriterData>> =
+        REGISTRY.register("structure_writer", Supplier {
+            DataComponentType.builder<StructureWriterData>()
+                .persistent(StructureWriterData.CODEC)
+                .networkSynchronized(StructureWriterData.STREAM_CODEC)
+                .build()
+        })
+
+    /**
+     * 结构检测工具（`structure_detect`）标出的错误位置与检测时刻
+     * （老工程物品 NBT 的 `error_pos` 子树）。同上，错误框在客户端画。
+     */
+    @JvmField
+    val STRUCTURE_DETECT: DeferredHolder<DataComponentType<*>, DataComponentType<StructureDetectData>> =
+        REGISTRY.register("structure_detect", Supplier {
+            DataComponentType.builder<StructureDetectData>()
+                .persistent(StructureDetectData.CODEC)
+                .networkSynchronized(StructureDetectData.STREAM_CODEC)
                 .build()
         })
 }

@@ -249,12 +249,11 @@ class WirelessEnergyHatchPartMachine(
         val perTickEu = throughputEu()
         if (perTickEu <= 0L) return
 
-        // 预充闸门：只要挂在**已成型**的控制器上就允许把缓冲攒满
-        // ⚠️ 判据从老工程的「正在 WORKING」放宽成「已成型」：批处理 / 并行会**一次**抽走远大于
-        //    `V × A` 的量，只备一 tick 的缓冲会让那种配方永远起不来（实机现象：缓冲卡在
-        //    `V × A` 那一格不再往上涨，面板上看着就是「只拉了一 tick 的量」）。
-        //    换汇速率仍是 `V × A`/tick，所以攒满只是「提前把电买进缓冲」，本档的通过能力没变。
-        if (!hasFormedController()) return
+        // 空转保护（倍数走配置 `wirelessEnergyHatch.idleBufferTicks`，默认 5）：
+        // 没在跑配方时最多预充 N tick 的电 —— 够应付批处理 / 并行的一次爆发用电，
+        // 又不至于让闲置结构把塔的储备整仓换成电趴在缓冲里。
+        // 机器在 WORKING 时不受这条限制，会一路按 `V × A`/tick 攒到满仓。
+        if (!hasWorkingController() && stored >= perTickEu * GtetConfig.wirelessIdleBufferTicks()) return
 
         val link = resolveLink()
         val tower = link.tower ?: return
@@ -303,16 +302,16 @@ class WirelessEnergyHatchPartMachine(
     private fun ceilDiv(a: Long, b: Long): Long = if (a <= 0L) 0L else (a + b - 1L) / b
 
     /**
-     * 本仓是不是挂在**已成型**的控制器上（预充闸门）。
+     * 本仓现在有没有「正在干活」的控制器（空转保护的第 ① 条）。
      *
-     * ⚠️ 老工程用的是「有没有在 WORKING」（[hasWorkingController]，现已删除）：那样只能备够一 tick 的量，
-     * 批处理 / 并行这类「一次抽走一大坨 EU」的配方永远起不来。放宽到「已成型」之后，缓冲会按
-     * `V × A`/tick 的速率一路攒到满 —— 这才是缓冲的意义（爆发用电有得用）。
-     * 没挂在成型结构上（散放 / 结构没成型）⇒ 一点 TF 都不换，避免白占塔的储备。
+     * 「在干活」= 已成型 **且** 配方逻辑处于 `WORKING`（`RecipeLogic.java:526`）。只看 `isFormed`
+     * 不够 —— 成型但闲置的结构每 tick 都会让本仓去换电，那正是空转耗电。
      */
-    private fun hasFormedController(): Boolean {
+    private fun hasWorkingController(): Boolean {
         for (controller in controllers) {
-            if (controller.isFormed) return true
+            if (!controller.isFormed) continue
+            val workable = controller as? WorkableMultiblockMachine ?: continue
+            if (workable.recipeLogic.isWorking) return true
         }
         return false
     }

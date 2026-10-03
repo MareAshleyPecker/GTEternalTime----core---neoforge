@@ -6,6 +6,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import org.apache.logging.log4j.Level
 import rain.fox.gtetcore.GTETSCore
+import rain.fox.gtetcore.client.StructureOverlayRenderer
 import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
 
 /**
@@ -43,5 +44,7 @@ class ClientProxy {
     @SubscribeEvent
     fun onClientSetup(event: FMLClientSetupEvent) {
         GTETSCore.LOGGER.log(Level.INFO, "Initializing client...")
+        // 结构工具的选区 / 错误位置覆盖层（GAME 总线的 RenderLevelStageEvent）
+        StructureOverlayRenderer.register()
     }
 }

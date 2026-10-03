@@ -20,6 +20,7 @@ import rain.fox.gtetcore.data.lang.JadeLang
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import rain.fox.gtetcore.data.lang.MasterTowerLang
 import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
+import rain.fox.gtetcore.data.lang.StructureToolLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.data.lang.TimeFlowHatchLang
 import rain.fox.gtetcore.data.lang.ThreadHatchLang
@@ -100,6 +101,9 @@ class CommonProxy {
         @Suppress("UNUSED_EXPRESSION") ETMachines.TEST_MULTIBLOCK
         @Suppress("UNUSED_EXPRESSION") ETItems.ADVANCED_TERMINAL
         @Suppress("UNUSED_EXPRESSION") ETItems.CLOCK_OF_TIME_SEQUENCE
+        @Suppress("UNUSED_EXPRESSION") ETItems.STRUCTURE_TOOLS
+        @Suppress("UNUSED_EXPRESSION") ETItems.STRUCTURE_CHECKER
+        @Suppress("UNUSED_EXPRESSION") ETItems.STRUCTURE_DETECT
         initLang()
 
         GTETSCore.LOGGER.log(
@@ -142,6 +146,8 @@ class CommonProxy {
         MultiblockPreviewLang.register()
         // Jade HUD 的能量 / TF 进度条
         JadeLang.register()
+        // 结构工具三件道具 + 导出面板的文案
+        StructureToolLang.register()
     }
 
     /**
