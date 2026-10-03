@@ -31,6 +31,17 @@ object MachineIoConfigLang {
     const val FACE_EAST: String = "$PREFIX.face.east"
     const val FACE_WEST: String = "$PREFIX.face.west"
 
+    /** 展开图小格里的**单字**面名（格子只有 20px，放不下上面那种两字名）。 */
+    const val FACE_SHORT_UP: String = "$PREFIX.face.short.up"
+    const val FACE_SHORT_DOWN: String = "$PREFIX.face.short.down"
+    const val FACE_SHORT_NORTH: String = "$PREFIX.face.short.north"
+    const val FACE_SHORT_SOUTH: String = "$PREFIX.face.short.south"
+    const val FACE_SHORT_EAST: String = "$PREFIX.face.short.east"
+    const val FACE_SHORT_WEST: String = "$PREFIX.face.short.west"
+
+    /** 展开图小格的 tooltip：怎么点。 */
+    const val FACE_CELL_TIP: String = "$PREFIX.face.tip"
+
     private val FACE_KEYS: Map<Direction, String> = mapOf(
         Direction.UP to FACE_UP,
         Direction.DOWN to FACE_DOWN,
@@ -38,6 +49,15 @@ object MachineIoConfigLang {
         Direction.SOUTH to FACE_SOUTH,
         Direction.EAST to FACE_EAST,
         Direction.WEST to FACE_WEST
+    )
+
+    private val FACE_SHORT_KEYS: Map<Direction, String> = mapOf(
+        Direction.UP to FACE_SHORT_UP,
+        Direction.DOWN to FACE_SHORT_DOWN,
+        Direction.NORTH to FACE_SHORT_NORTH,
+        Direction.SOUTH to FACE_SHORT_SOUTH,
+        Direction.EAST to FACE_SHORT_EAST,
+        Direction.WEST to FACE_SHORT_WEST
     )
 
     /**
@@ -61,9 +81,24 @@ object MachineIoConfigLang {
         LangUtil.add(FACE_SOUTH, "South", "南面")
         LangUtil.add(FACE_EAST, "East", "东面")
         LangUtil.add(FACE_WEST, "West", "西面")
+
+        LangUtil.add(FACE_SHORT_UP, "U", "顶")
+        LangUtil.add(FACE_SHORT_DOWN, "D", "底")
+        LangUtil.add(FACE_SHORT_NORTH, "N", "北")
+        LangUtil.add(FACE_SHORT_SOUTH, "S", "南")
+        LangUtil.add(FACE_SHORT_EAST, "E", "东")
+        LangUtil.add(FACE_SHORT_WEST, "W", "西")
+        LangUtil.add(
+            FACE_CELL_TIP, "Left-click: set as the item output side; right-click: set as the fluid output side",
+            "左键：设为物品输出面；右键：设为流体输出面"
+        )
     }
 
     /** 绝对朝向 → 语言键。 */
     @JvmStatic
     fun faceKey(direction: Direction): String = FACE_KEYS.getOrDefault(direction, FACE_UP)
+
+    /** 绝对朝向 → 展开图小格的单字面名键。 */
+    @JvmStatic
+    fun shortFaceKey(direction: Direction): String = FACE_SHORT_KEYS.getOrDefault(direction, FACE_SHORT_UP)
 }
