@@ -24,10 +24,16 @@ object PreviewControls {
     private const val ROW_NAME = "gtetscore_preview_controls"
     private const val BUTTON_SIZE = 16
 
+    /** 两颗 16px 按钮 + `childPadding(2)`。 */
+    private const val ROW_WIDTH = BUTTON_SIZE * 2 + 2
+
+    /** 3D 视图在预览控件内容区里的左边界：`selected_block` 恒为 20 宽（MultiblockPreviewWidget.java:248-251）。 */
+    private const val SCHEMA_X = 20
+
     /** 正在构造的是全屏那份预览：全屏里那颗按钮是「退出」，内嵌那份是「全屏」。 */
     private var fullscreen: Boolean = false
 
-    /** 构造全屏预览期间置位；见 [MultiblockPreviewFullscreenScreen.buildUI]。 */
+    /** 构造全屏预览期间置位；见 [buildFullscreenPanel]。 */
     fun beginFullscreen() {
         fullscreen = true
     }
@@ -36,22 +42,31 @@ object PreviewControls {
         fullscreen = false
     }
 
-    /** 挂按钮条；失败不能连带 GTM 自己的预览控件打不开。 */
+    /**
+     * 挂按钮条；失败不能连带 GTM 自己的预览控件打不开。
+     *
+     * `schemaWidth` = `MultiblockPreviewWidget` 构造器第 3 个参数，也就是 3D 控件自己的宽度
+     * （`MultiblockPreviewWidget.java:192` 的 `.size(width, height)`），拿它算绝对坐标。
+     */
     @JvmStatic
-    fun attach(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition) {
+    fun attach(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition, schemaWidth: Int) {
         try {
-            preview.child(buildRow(preview, definition))
+            preview.child(buildRow(preview, definition, schemaWidth))
+            PreviewCameraFit.debugLog(if (fullscreen) "全屏" else "内嵌", preview.multiblockSchemaInfo, schemaWidth)
         } catch (t: Throwable) {
             GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 挂载多方块预览控制按钮失败", t)
         }
     }
 
-    private fun buildRow(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition): Flow {
+    private fun buildRow(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition,
+                         schemaWidth: Int): Flow {
         val row = Flow.row().name(ROW_NAME).coverChildren().childPadding(2)
-        // 位置用 right(int) / top(int)（像素），不要用 rightRel：DimensionSizer#calcPoint 对 end 单位做
-        // `parentSize - v` 翻转，rightRel(1.0f) 会把控件甩到父级左侧外面去（GTM 自己那颗
-        // 「display preview in world」按钮 MultiblockPreviewWidget.java:206 就是这么写的）。
-        row.right(2).top(2)
+        // 只给像素制的 left/top：right(int) / rightRel(float) 都要先知道父级宽度，而父级是
+        // `coverChildren()`（宽度反过来由子件撑出），是循环依赖 —— MUI 会先按未解析值摆一次，父级可能被撑大；
+        // 而 JEI 那边整框尺寸取自控件的固定尺寸，取不到就退回 getMaxWidth/getMaxHeight = 200x180
+        // （MultiblockInfoJeiCategory.java:56-63 → ModularUIJeiCategory.getWidth(recipe)），父级一变大框就跟着变。
+        // 用构造参数里的 3D 控件宽度直接算绝对坐标，父级尺寸与这排按钮无关。
+        row.left(SCHEMA_X + schemaWidth - ROW_WIDTH - 2).top(2)
 
         if (fullscreen) {
             row.child(
