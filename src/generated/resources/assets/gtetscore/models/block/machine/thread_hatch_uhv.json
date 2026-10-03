@@ -1,0 +1,44 @@
+{
+  "parent": "minecraft:block/block",
+  "loader": "gtceu:machine",
+  "machine": "gtetscore:thread_hatch_uhv",
+  "replaceable_textures": [
+    "bottom",
+    "top",
+    "side"
+  ],
+  "variants": {
+    "recipe_logic_status=idle": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uhv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/thread_hatch/thread_hatch_mk2/overlay_front"
+        }
+      }
+    },
+    "recipe_logic_status=suspend": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uhv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/thread_hatch/thread_hatch_mk2/overlay_front"
+        }
+      }
+    },
+    "recipe_logic_status=waiting": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uhv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/thread_hatch/thread_hatch_mk2/overlay_front_active"
+        }
+      }
+    },
+    "recipe_logic_status=working": {
+      "model": {
+        "parent": "gtceu:block/casings/voltage/uhv",
+        "textures": {
+          "overlay_front": "gtocore:block/machines/thread_hatch/thread_hatch_mk2/overlay_front_active"
+        }
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ package rain.fox.gtetcore.integration.jade;
 import rain.fox.gtetcore.GTETSCore;
 import rain.fox.gtetcore.integration.jade.provider.ETEnergyStorageProvider;
 import rain.fox.gtetcore.integration.jade.provider.ETTimeFlowStorageProvider;
+import rain.fox.gtetcore.integration.jade.provider.ThreadedRecipeLogicProvider;
 
 import com.gregtechceu.gtceu.api.block.MetaMachineBlock;
 import com.gregtechceu.gtceu.api.machine.MetaMachine;
@@ -30,11 +31,13 @@ public class ETJadePlugin implements IWailaPlugin {
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(ETEnergyStorageProvider.INSTANCE, MetaMachine.class);
         registration.registerBlockDataProvider(ETTimeFlowStorageProvider.INSTANCE, MetaMachine.class);
+        registration.registerBlockDataProvider(ThreadedRecipeLogicProvider.INSTANCE, MetaMachine.class);
     }
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
         registration.registerBlockComponent(ETEnergyStorageProvider.INSTANCE, MetaMachineBlock.class);
         registration.registerBlockComponent(ETTimeFlowStorageProvider.INSTANCE, MetaMachineBlock.class);
+        registration.registerBlockComponent(ThreadedRecipeLogicProvider.INSTANCE, MetaMachineBlock.class);
     }
 }

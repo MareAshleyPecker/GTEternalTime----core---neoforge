@@ -21,6 +21,7 @@ import rain.fox.gtetcore.data.lang.MasterTowerLang
 import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.data.lang.TimeFlowHatchLang
+import rain.fox.gtetcore.data.lang.ThreadHatchLang
 import rain.fox.gtetcore.data.lang.WirelessEnergyHatchLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
 import rain.fox.gtetcore.data.recipe.ETRecipeProvider
@@ -126,6 +127,8 @@ class CommonProxy {
         MasterTowerLang.register()
         // 无线能源仓：tooltip 共用行 + 绑定手势的聊天提示 + 部件面板的状态行
         WirelessEnergyHatchLang.register()
+        // 线程仓：仓本身的提示 + 多线程状态的整机/分组显示文案（机器面板与 Jade 共用）
+        ThreadHatchLang.register()
         // 机器 3D 输入输出配置页
         MachineIoConfigLang.register()
         // 多方块 3D 预览的全屏 / 退出 / 重置视角按钮

@@ -11,6 +11,7 @@ import com.gregtechceu.gtceu.api.machine.trait.recipe.RecipeLogic
 import com.gregtechceu.gtceu.api.registry.registrate.entry.MachineEntry
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels.createWorkableTieredHullMachineModel
 import rain.fox.gtetcore.common.data.machine.hatch.ETOverclockHatches
+import rain.fox.gtetcore.common.data.machine.hatch.ETThreadHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETTimeFlowHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETWirelessEnergyHatches
 import rain.fox.gtetcore.common.data.machine.multiblock.ETMasterTower
@@ -82,9 +83,15 @@ object ETMachines {
     @JvmField
     val PARALLEL_HATCHES: List<MachineEntry<MachineDefinition>> = listOf(parallel_hatch_iv)
 
-    /** 线程仓：变体表还没移植，先给空占位（静态组表拿不齐就不缓存，会自动重算）。 */
+    /**
+     * 线程仓全族 8 档：ZPM 4 / UV 8 / UHV 16 / UEV 32 / UIV 64 / UXV 128 / OpV 256 / MAX 512。
+     *
+     * ⚠️ 本行必须排在**任何消费线程仓的多方块**之前（同 [TIME_FLOW_HATCHES] 的那条顺序约定：
+     * `PartAbility#getAllBlocks()` 是懒记忆化的）。
+     */
     @JvmField
-    val THREAD_HATCHES: List<MachineEntry<MachineDefinition>> = emptyList()
+    val THREAD_HATCHES: List<MachineEntry<MachineDefinition>> =
+        ETThreadHatches.register(ETRegistrate.REGISTRATE)
 
     /**
      * 时序仓（TF 供给仓）全族 6 档：UHV 1h / UEV 16h / UIV 64h / UXV 256h / OpV 1024h / MAX 4096h。
