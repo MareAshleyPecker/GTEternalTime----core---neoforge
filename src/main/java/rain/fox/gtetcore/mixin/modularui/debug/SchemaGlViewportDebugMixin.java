@@ -49,13 +49,16 @@ public class SchemaGlViewportDebugMixin {
             GL11.glGetIntegerv(GL11.GL_VIEWPORT, gtetcore$glViewport);
             Window window = Minecraft.getInstance().getWindow();
             double guiScale = (double) window.getWidth() / Math.max(1, window.getGuiScaledWidth());
+            // GL 的 y 从帧缓冲底部算起，要跟 MUI 的 area.x/y（左上原点）比就得翻过来
+            double leftGui = gtetcore$glViewport.get(0) / guiScale;
+            double topGui = (window.getHeight() - gtetcore$glViewport.get(1) - gtetcore$glViewport.get(3)) / guiScale;
             PreviewDiag.line(String.format(Locale.ROOT,
-                    "[GTET] GL视口(帧缓冲px)=(%d,%d) %dx%d | 该控件 GUI 尺寸=%dx%d | GUIscale=%.3f "
-                            + "| 折算成 GUI 坐标=(%.1f,%.1f) %.1fx%.1f",
+                    "[GTET] GL视口(帧缓冲px)=(%d,%d) %dx%d | 该控件 GUI 尺寸=%dx%d | guiScale=%.3f "
+                            + "| 折算成 GUI 左上角=(%.1f,%.1f) %.1fx%.1f",
                     gtetcore$glViewport.get(0), gtetcore$glViewport.get(1),
                     gtetcore$glViewport.get(2), gtetcore$glViewport.get(3),
                     width, height, guiScale,
-                    gtetcore$glViewport.get(0) / guiScale, gtetcore$glViewport.get(1) / guiScale,
+                    leftGui, topGui,
                     gtetcore$glViewport.get(2) / guiScale, gtetcore$glViewport.get(3) / guiScale));
         } catch (Throwable ignored) {
             // 诊断日志不能影响渲染
