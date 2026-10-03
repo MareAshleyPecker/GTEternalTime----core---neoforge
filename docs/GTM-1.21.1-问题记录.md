@@ -193,6 +193,33 @@ Reference map 'modularui.refmap.json' for modularui.mixins.json could not be rea
 
 ---
 
+## 10. 带 `@EventBusSubscriber` 的 Kotlin object 会让 mod 构造期直接崩（严重度：高 · 状态：已绕开；KFF 与 NeoForge 版本不兼容）
+
+**一句话**：Kotlin for Forge 5.7.0 与 NeoForge 21.1.252（FML loader 4.0.44）不兼容——**只要 classpath 上存在带 `@EventBusSubscriber` 的 Kotlin object，mod 构造期必崩**，`runData` 与游戏都起不来；改成手工 `addListener` 即可。
+
+**来源**：
+
+```
+java.lang.NoClassDefFoundError: net.neoforged.fml.Bindings
+	at thedarkcolour.kotlinforforge.neoforge.AutoKotlinEventBusSubscriber.registerTo(...)
+```
+
+**触发**：任何 Kotlin `object` 上加 `@EventBusSubscriber`（老项目 1.20.1 的写法）。
+⚠️ 顺带一个陷阱：`EventBusSubscriber.Bus` 在 21.1.252 已 `@Deprecated(forRemoval = true)`，而且 NeoForge 的 `AutomaticEventSubscriber.inject` **根本不读 `bus` 成员**（它按每个 `@SubscribeEvent` 方法的参数是不是 `IModBusEvent` 自动判总线）——所以「把 `bus` 参数去掉」并不能解决这个崩溃。
+
+**成因**：FML loader 4.0.44 删掉了 `net.neoforged.fml.Bindings`，而 KFF 5.7.0 的 `AutoKotlinEventBusSubscriber` 仍在调用它。属上游版本不匹配，不是本工程引入的问题。
+
+**处理**：本工程**一律手工注册**，不用 `@EventBusSubscriber`：
+
+```kotlin
+NeoForge.EVENT_BUS.addListener(TerminalGroupSeeder::onPlayerTick)   // GAME 总线
+MOD_BUS.addListener(::onGatherData)                                 // mod 总线
+```
+
+长期建议：换成与 FML 4.0.44 匹配的 KFF 版本；在那之前，任何人加回 `@EventBusSubscriber` 都会复现这个崩溃。
+
+---
+
 ## 附录：不是 bug，但会让老代码编不过（API 变更，详见项目笔记）
 
 | 1.20.1 写法 | 8.0.0 现状 |
