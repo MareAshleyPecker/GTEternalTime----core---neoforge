@@ -45,5 +45,7 @@
   "item.gtetcore.advanced_terminal.setting.7.tooltip.disabled": "模块化机器尚未移植，本项当前无效（可以照常调）。",
   "item.gtetcore.advanced_terminal.setting.8": "拆除模式",
   "item.gtetcore.advanced_terminal.setting.8.tooltip": "是否启用拆除模式。启用后不再放置方块，而是按结构把当前位置的结构方块拆掉。不属于本结构的方块不会被拆除。",
-  "item.gtetcore.advanced_terminal.setting.title": "高级终端设置"
+  "item.gtetcore.advanced_terminal.setting.title": "高级终端设置",
+  "item.gtetcore.advanced_terminal.tooltip.open_panel": "右键空气：打开终端设置",
+  "itemGroup.gtetcore.gtet": "GTEternalTime"
 }

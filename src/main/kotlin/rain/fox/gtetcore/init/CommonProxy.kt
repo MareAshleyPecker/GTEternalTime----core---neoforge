@@ -13,6 +13,7 @@ import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
 import rain.fox.gtetcore.config.GtetConfig
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
 import rain.fox.gtetcore.data.lang.ZhCnLangProvider
+import rain.fox.gtetcore.data.recipe.ETRecipeProvider
 import rain.fox.gtetcore.registry.ETDataComponents
 import rain.fox.gtetcore.registry.ETItems
 import rain.fox.gtetcore.registry.ETMachines
@@ -71,22 +72,15 @@ class CommonProxy {
     private fun kotlinInit() {
         // 配置必须在 mod 构造期注册，NeoForge 才会加载它
         GtetConfig.register()
-
         // 数据组件（1.21 取代物品 NBT）也必须挂到 mod 事件总线上
         ETDataComponents.REGISTRY.register(MOD_BUS)
-
         // Registrate 只在 builder 被创建的那一瞬间登记，所以必须在这里取一次值。
         // ⚠️ 别在这里读 MachineEntry 的值（如 .tier）：mod 构造期注册表还没建好，
         //    读它会抛 `IllegalStateException: Registry not present for DeferredHolder{... gtceu:machine}`。
-        @Suppress("UNUSED_EXPRESSION")
-        TestMachines.test_sync_part
-        @Suppress("UNUSED_EXPRESSION")
-        ETMachines.parallel_hatch_iv
-        @Suppress("UNUSED_EXPRESSION")
-        ETItems.ADVANCED_TERMINAL
-
-        // 高级终端设置面板的语言键（必须早于 runData 的数据生成）
-        AdvancedTerminalLang.register()
+        @Suppress("UNUSED_EXPRESSION") TestMachines.test_sync_part
+        @Suppress("UNUSED_EXPRESSION") ETMachines.parallel_hatch_iv
+        @Suppress("UNUSED_EXPRESSION") ETItems.ADVANCED_TERMINAL
+        initLang()
 
         GTETCore.LOGGER.log(
             Level.INFO,
@@ -97,6 +91,11 @@ class CommonProxy {
         // 高级终端静态组预置：GAME 总线的手工注册。
         // ⚠️ 刻意不写成带 `@EventBusSubscriber` 的 Kotlin object —— 原因见类注释。
         NeoForge.EVENT_BUS.addListener(TerminalGroupSeeder::onPlayerTick)
+    }
+
+    private fun initLang(){
+        // 高级终端设置面板的语言键（必须早于 runData 的数据生成）
+        AdvancedTerminalLang.register()
     }
 
     /**
@@ -111,7 +110,7 @@ class CommonProxy {
      * 要验证这些监听器只能真起游戏。
      */
     @SubscribeEvent
-    fun onCommonSetup(event: FMLCommonSetupEvent) {
+    private fun onCommonSetup(event: FMLCommonSetupEvent) {
         GTETCore.LOGGER.log(Level.INFO, "Hello! This is working!")
 
         // 最小测试（阶段 1）：证明 GTCEu 8.0.0（1.21.1）在类路径上、API 真的能调用。
@@ -133,11 +132,19 @@ class CommonProxy {
         GTETCore.LOGGER.log(Level.INFO, "Server starting...")
     }
 
-    /** 数据生成入口：en_us / en_ud 由 registrate 自己写，这里只补 zh_cn（各写各的文件，不抢路径）。 */
+    /**
+     * 数据生成入口：en_us / en_ud 由 registrate 自己写，这里只补 zh_cn 与工作台配方（各写各的文件，不抢路径）。
+     *
+     * 配方是服务端数据（`data/gtetcore/recipe/`），所以挂 [GatherDataEvent.includeServer] 那一支；
+     * 语言文件是客户端资源，挂 `includeClient()`。
+     */
     @SubscribeEvent
     fun onGatherData(event: GatherDataEvent) {
         if (event.includeClient()) {
             event.addProvider(ZhCnLangProvider(event.generator.packOutput))
+        }
+        if (event.includeServer()) {
+            event.addProvider(ETRecipeProvider(event.generator.packOutput, event.lookupProvider))
         }
     }
 }

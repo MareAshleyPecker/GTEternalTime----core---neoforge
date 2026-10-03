@@ -46,5 +46,7 @@
   "item.gtetcore.advanced_terminal.setting.7.tooltip.disabled": "Modular machines are not ported yet - this option does nothing for now.",
   "item.gtetcore.advanced_terminal.setting.8": "Demolition mode",
   "item.gtetcore.advanced_terminal.setting.8.tooltip": "Whether to enable the demolition mode. After enabling this, blocks are no longer placed: the structure blocks at each position are removed instead. Blocks that do not belong to this structure are left untouched.",
-  "item.gtetcore.advanced_terminal.setting.title": "Advanced Terminal Setting"
+  "item.gtetcore.advanced_terminal.setting.title": "Advanced Terminal Setting",
+  "item.gtetcore.advanced_terminal.tooltip.open_panel": "Right-click air: open the terminal settings",
+  "itemGroup.gtetcore.gtet": "GTEternalTime"
 }
