@@ -312,6 +312,40 @@ net.neoforged.fml.ModLoadingException: Loading errors encountered:
 
 ---
 
+## 14. MUI × JEI：`jei.RecipeSlotAccessor` 注入失败（严重度：低 · 状态：**不修**，外部冲突）
+
+**一句话**：GTCEu 捆绑的 MUI 3.3.1 里有个 accessor 要读 JEI `RecipeSlot` 的字段，而那字段从 JEI 19.50 起就被重构成了另一个类 —— 版本区间与 LDLib2 的硬性下限正好对不上，**没有可用的版本组合，也不值得补丁**。
+
+**来源**：
+
+```
+[Mixin apply for mod modularui failed] modularui.mixins.json:jei.RecipeSlotAccessor
+  -> mezz.jei.library.gui.ingredients.RecipeSlot
+org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException:
+  No candidates were found matching allIngredients:Ljava/util/List;
+```
+
+**成因**（读 JEI 官方 sources jar 逐版核对）：
+
+- MUI 3.3.1 的 accessor 需要 `RecipeSlot` 的 5 个成员：`role` / `cycler` / `tooltipCallbacks` / **`allIngredients`** / **`displayIngredients`**；
+- **JEI 19.25.1.328**（GTM 版本目录钉的那版）里它们全在：`RecipeSlot.java:61`（`allIngredients`）、`:69`（`displayIngredients`）⇒ MUI 是对着 **≤19.44** 这一代写的；
+- **JEI 19.51.0.417** 同文件：新增协作者 `:47 private final RecipeSlotIngredients ingredients;`（`:70-74` 构造），`allIngredients` 只剩构造器参数名（`:63`），`displayIngredients` 字段消失；读取改走 `:87-88 getAllIngredients()` / `:93-94 getAllIngredientsList()`；
+- **分界点落在 19.44.0.413（有）与 19.50.0.414（无）之间**；
+- 逐个下载 **≥19.51.0.417 的全部 27 个版本**（19.51.0.417 … 19.57.0.450）的 sources jar 核对：**带旧字段的版本数 = 0/27** ⇒ "往上对齐版本"这条路不存在；
+- "往下退版本"也被堵死：**LDLib2 2.2.41 的 `neoforge.mods.toml` 声明 `jei [19.51.0.417,)`**（硬下限），降 JEI 就等于放弃 LDLib2。
+
+**为什么不做补丁**：
+
+- **自己 mixin 给 JEI `RecipeSlot` 补同名字段**：应用顺序上可行（Mixin 按 priority 升序应用，把自己设成低于 MUI 默认 1000 就能先并入字段），但**补了也不修行为** —— 19.51 的 `RecipeSlot` 只读写自己的 `ingredients`，写进补出来的字段等于写进死变量，JEI 永不读；而且缺的是**两个**字段，MUI 在第一个缺失处就抛错。收益只是日志少一行 FATAL，代价是一条钻进第三方私有字段布局的跨 mod mixin。**判定：不做。**
+- **Access Transformer**：语义上做不到 —— AT 只能给**已存在**的成员改访问标志（`Modifier` 只有访问级别），没有新增成员的语法；而这里是 `No candidates were found`（字段不存在），不是权限问题。
+- **重新分发打过补丁的 JEI jar**：许可证 + 分发成本远大于收益，不做。
+
+**实际影响（可忽略）**：MUI 的 `RecipeViewerHandler.getCurrent()` 选择顺序是 **EMI → REI → JEI → dummy**，装了 EMI 的包里 MUI 的槽位工厂拿到的是 **EMI** 实现；被削掉的只是 MUI 的 **JEI 槽位粘合层**（配料替换/轮换这类附加行为），GT 自己的 JEI 配方页（用 JEI 原生 API 建槽）不受影响，实测那页仍渲染正常。
+
+**结论**：等 MUI（或 GTM 捆绑的 MUI）自己支持 JEI 19.51+，不是我们能 patch 的层。
+
+---
+
 ## 模板（新增条目时复制）
 
 ```markdown
