@@ -8,6 +8,7 @@ import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.common.NeoForge
 import net.neoforged.neoforge.data.event.GatherDataEvent
 import org.apache.logging.log4j.Level
+import rain.fox.gtetcore.ETGTAddon
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.common.item.terminal.TerminalGroupSeeder
 import rain.fox.gtetcore.config.GtetConfig
@@ -123,6 +124,10 @@ class CommonProxy {
             "[GTET-TEST] GTCEu 可调用：HV = {} EU/t，电压档位数 = {}，GTCEuAPI 类 = {}",
             GTValues.V[GTValues.HV], GTValues.V.size, GTCEuAPI::class.java.name
         )
+
+        // GTET 的启动自检：老工程 `IGTAddon#initializeAddon()` 的落点（8.0.0 已删掉那个回调）。
+        // 放在这里是因为此刻所有注册都已完成、注册表已冻结 —— 见 ETGTAddon.verify() 的注释。
+        ETGTAddon.verify()
     }
 
     /**
