@@ -19,10 +19,6 @@ object GtetConfig {
 
     // ── 默认值（与老项目一字不差，改默认值等于改玩家行为）──
 
-    const val default_check_failed_waiting_time: Int = 10
-    const val default_placement_check_delay: Int = 20
-    const val default_unload_waiting_time: Int = 1
-    const val default_async_check_interval: Int = 250
     const val default_send_form_error_message: Boolean = true
 
     /** 部件是否可被多个已成型结构共享；默认 false（防串配方）。 */
@@ -42,10 +38,6 @@ object GtetConfig {
 
     private val builder: ModConfigSpec.Builder = ModConfigSpec.Builder()
 
-    val check_failed_waiting_time: ModConfigSpec.IntValue
-    val placement_check_delay: ModConfigSpec.IntValue
-    val unload_waiting_time: ModConfigSpec.IntValue
-    val async_check_interval: ModConfigSpec.IntValue
     val send_form_error_message: ModConfigSpec.BooleanValue
     val parts_shareable: ModConfigSpec.BooleanValue
 
@@ -59,18 +51,6 @@ object GtetConfig {
     init {
         builder.comment("多方块结构检测相关（时间单位：tick）", "Multiblock structure checks (in ticks)")
             .push("multiblock")
-
-        check_failed_waiting_time = builder.comment("结构成型失败后的重试等待时间")
-            .defineInRange("checkFailedWaitingTime", default_check_failed_waiting_time, 1, 1200)
-
-        placement_check_delay = builder.comment("放置检查延迟")
-            .defineInRange("placementCheckDelay", default_placement_check_delay, 0, 1200)
-
-        unload_waiting_time = builder.comment("区块卸载后的等待时间")
-            .defineInRange("unloadWaitingTime", default_unload_waiting_time, 1, 1200)
-
-        async_check_interval = builder.comment("异步结构检测间隔")
-            .defineInRange("asyncCheckInterval", default_async_check_interval, 1, 10000)
 
         send_form_error_message = builder.comment("结构成型失败时是否给玩家发提示")
             .define("sendFormErrorMessage", default_send_form_error_message)
@@ -141,14 +121,6 @@ object GtetConfig {
 
     // ── 读取入口 ──
     // 配置没加载时（例如数据生成阶段）一律退回默认值，所以每个入口都过一道 isLoaded 判断。
-
-    fun checkFailedWaitingTime(): Int = intValue(check_failed_waiting_time, default_check_failed_waiting_time)
-
-    fun placementCheckDelay(): Int = intValue(placement_check_delay, default_placement_check_delay)
-
-    fun unloadWaitingTime(): Int = intValue(unload_waiting_time, default_unload_waiting_time)
-
-    fun asyncCheckInterval(): Int = intValue(async_check_interval, default_async_check_interval)
 
     fun sendFormErrorMessage(): Boolean = booleanValue(send_form_error_message, default_send_form_error_message)
 

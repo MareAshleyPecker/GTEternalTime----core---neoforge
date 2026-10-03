@@ -252,12 +252,15 @@ class ETGTAddon : IGTAddon {
             recipeNames.forEach { consumer.accept(GTCEu.id("$recipeType/$it")) }
         }
 
-        /** GTM 自带并行仓那 4 条工作台配方的注册名（`GCYMRecipes.java:173-184`，8.0.0 未改名）。 */
+        /**
+         * GTM 自带并行仓配方的注册名（`GCYMRecipes.java:173-184`，8.0.0 未改名）。
+         *
+         * 只剔 `mk1`（IV 档）。GTET 自己的 `parallel_hatch_iv` 只覆盖 IV 这一档，
+         * `mk2/mk3/mk4`（LuV/ZPM/UV）不剔 —— 剔了那三档就会「既没有 GTM 配方、也没有 GTET 替代配方」，
+         * 玩家永远造不出来。等 GTET 补齐那三档再回来加。
+         */
         private val gtm_parallel_hatch_recipe_names = listOf(
             "parallel_hatch_mk1",
-            "parallel_hatch_mk2",
-            "parallel_hatch_mk3",
-            "parallel_hatch_mk4",
         )
 
         /**
