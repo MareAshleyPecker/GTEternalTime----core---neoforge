@@ -4,12 +4,14 @@ package rain.fox.gtetcore.client.mui
 
 import brachy.modularui.api.IPacketWriter
 import brachy.modularui.api.ISyncedAction
+import brachy.modularui.api.drawable.IDrawable
 import brachy.modularui.api.drawable.Text
 import brachy.modularui.api.widget.IGuiAction
 import brachy.modularui.api.widget.IWidget
 import brachy.modularui.drawable.GuiTextures
-import brachy.modularui.drawable.schema.BaseSchemaRenderer
+import brachy.modularui.drawable.Rectangle
 import brachy.modularui.drawable.schema.BlockHighlight
+import brachy.modularui.drawable.schema.ISchema
 import brachy.modularui.drawable.schema.MapSchema
 import brachy.modularui.utils.Color
 import brachy.modularui.value.BoolValue
@@ -24,7 +26,9 @@ import com.gregtechceu.gtceu.api.machine.mui.MachineUIPanel
 import com.gregtechceu.gtceu.common.machine.trait.AutoOutputTrait
 import com.gregtechceu.gtceu.common.mui.GTGuiTextures
 import com.gregtechceu.gtceu.integration.recipeviewer.widgets.GTMultiblockSchemaRenderer
+import com.mojang.blaze3d.systems.RenderSystem
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer
+import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.network.RegistryFriendlyByteBuf
@@ -34,6 +38,7 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.HitResult
 import org.apache.logging.log4j.Level as LogLevel
 import org.joml.Vector3f
+import org.joml.Vector3fc
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.data.lang.MachineIoConfigLang
 import java.util.function.BooleanSupplier
@@ -43,8 +48,21 @@ import java.util.function.Supplier
 private const val ACTION_ITEM = "gtetscore:io_config_item"
 private const val ACTION_FLUID = "gtetscore:io_config_fluid"
 
-/** 假 schema 里单格方块的坐标；相机看它的几何中心 (0.5, 0.5, 0.5)。 */
+/** 假 schema 里单格方块的坐标。 */
 private val SCHEMA_ORIGIN: BlockPos = BlockPos.ZERO
+
+/** 方块的几何中心；`SchemaWidget.draw` 每帧拿它当相机 lookAt（见 [MachineSchema]）。 */
+private val SCHEMA_FOCUS: Vector3f = Vector3f(0.5f, 0.5f, 0.5f)
+
+/** `SchemaWidget.scale` 就是 `Camera.setLookAtAndAngle` 的第 4 个参数 dist（单位：格）。 */
+private const val SCHEMA_DISTANCE = 2.0f
+private const val SCHEMA_YAW = 0.7853982f
+private const val HIGHLIGHT_THICKNESS = 1f / 32f
+
+private val BACKDROP_UNDERLAY: Int = Color.argb(255, 24, 26, 30)
+private val ITEM_FACE_COLOR: Int = Color.argb(235, 60, 220, 90)
+private val FLUID_FACE_COLOR: Int = Color.argb(235, 70, 170, 255)
+private val HOVER_FACE_COLOR: Int = Color.argb(160, 255, 255, 255)
 
 /**
  * 「3D 输入输出配置页」的装配点。
@@ -64,14 +82,17 @@ object MachineIoConfig {
         val trait = machine.getTrait(AutoOutputTrait::class.java) ?: return
         if (!trait.supportsAutoOutputItems() && !trait.supportsAutoOutputFluids()) return
 
-        val page = MachineIoConfigPage(machine, trait, syncManager)
+        // 页面加进 panel 之前先快照同层子件（titleBar / 两个配置列 / panelContents）
+        val siblings = panel.children.toList()
+
+        val page = MachineIoConfigPage(machine, trait, syncManager, siblings)
         val toggle = ToggleButton()
             .size(16)
             .overlay(GTGuiTextures.TOOL_IO_FACING_ROTATION)
             .value(
                 BoolValue.Dynamic(
-                    { page.isEnabled },
-                    { enabled -> page.isEnabled = enabled }
+                    BooleanSupplier { page.isEnabled },
+                    BooleanConsumer { open -> page.setPageOpen(open) }
                 )
             )
             .tooltipAutoUpdate(true)
@@ -88,14 +109,14 @@ object MachineIoConfig {
  * 3D 积木：GTMultiblockSchemaRenderer（GTMultiblockSchemaRenderer.java:10）+ MapSchema
  * （brachy.modularui.drawable.schema.MapSchema）+ SchemaWidget；面点击读数走
  * `BaseSchemaRenderer#lastRayTrace`，先例 MultiblockPreviewWidget.java:111-123。
- * 相机默认是 (0,0,0) 看 (0,0,0)（Camera 构造器），必须自己设，否则什么都看不见。
  *
  * @author rain fox
  */
 class MachineIoConfigPage(
     private val machine: MetaMachine,
     private val trait: AutoOutputTrait,
-    private val syncManager: PanelSyncManager
+    private val syncManager: PanelSyncManager,
+    private val siblings: List<IWidget>
 ) : ParentWidget<MachineIoConfigPage>() {
 
     private val itemSupported: Boolean = trait.supportsAutoOutputItems()
@@ -108,6 +129,10 @@ class MachineIoConfigPage(
         background(GTGuiTextures.BACKGROUND)
         excludeAreaInRecipeViewer()
         isEnabled = false
+
+        // 不透明底：Rectangle 兜底铺满，GT 的背景图叠在上面
+        child(IDrawable.DrawableWidget(Rectangle().color(BACKDROP_UNDERLAY).solid()).sizeRel(1f))
+        child(IDrawable.DrawableWidget(GTGuiTextures.BACKGROUND).sizeRel(1f))
 
         // C2S：executeClient=false / executeServer=true，与 GTMuiWidgets.java:212 同一组参数。
         if (itemSupported) {
@@ -137,10 +162,16 @@ class MachineIoConfigPage(
                 .top(4)
                 .overlay(GuiTextures.CLOSE)
                 .onMousePressed { _, _ ->
-                    isEnabled = false
+                    setPageOpen(false)
                     true
                 }
         )
+    }
+
+    /** 开 / 关这一页；同时把同层的机器界面子件一起关掉，免得盖不严时透底。 */
+    fun setPageOpen(open: Boolean) {
+        isEnabled = open
+        siblings.forEach { sibling -> sibling.isEnabled = !open }
     }
 
     // ======================== 3D 视图 ========================
@@ -159,16 +190,16 @@ class MachineIoConfigPage(
     }
 
     private fun buildSchemaWidget(level: Level): IWidget {
-        val blocks = HashMap<BlockPos, BlockState>()
-        blocks[SCHEMA_ORIGIN] = level.getBlockState(machine.blockPos)
-
-        val renderer = GTMultiblockSchemaRenderer(MapSchema(blocks))
-            .highlightRenderer(BlockHighlight(Color.withAlpha(Color.GREEN.brighter(1), 0.9f), 1f / 32f))
-        renderer.camera().setPosAndLookAt(0.5f, 0.5f, -3.2f, Vector3f(0.5f, 0.5f, 0.5f))
+        val renderer = IoFaceSchemaRenderer(MachineSchema(level.getBlockState(machine.blockPos))) {
+            currentFaceMarkers()
+        }
+        renderer.highlightRenderer(BlockHighlight(HOVER_FACE_COLOR, HIGHLIGHT_THICKNESS))
 
         return renderer.asWidget()
             .name("io_config_schema")
             .sizeRel(1f)
+            .scale(SCHEMA_DISTANCE)
+            .yaw(SCHEMA_YAW)
             .listenGuiAction(IGuiAction.MouseReleased { _, button -> onFaceClicked(renderer, button) })
             .tooltipAutoUpdate(true)
             .tooltipDynamic { r ->
@@ -177,10 +208,18 @@ class MachineIoConfigPage(
             }
     }
 
+    /** 该高亮的两个面；客户端读同步下来的 trait 字段，服务端不建 3D 也不会走到这里。 */
+    private fun currentFaceMarkers(): List<Pair<Direction, Int>> {
+        val markers = ArrayList<Pair<Direction, Int>>(2)
+        if (itemSupported) trait.itemOutputDirection?.let { markers.add(it to ITEM_FACE_COLOR) }
+        if (fluidSupported) trait.fluidOutputDirection?.let { markers.add(it to FLUID_FACE_COLOR) }
+        return markers
+    }
+
     // ======================== 面点击 → I/O ========================
 
     /** 左键 = 物品输出面，右键 = 流体输出面（对齐 1.20.1 的手感）。 */
-    private fun onFaceClicked(renderer: BaseSchemaRenderer, button: Int): Boolean {
+    private fun onFaceClicked(renderer: GTMultiblockSchemaRenderer, button: Int): Boolean {
         val hit = renderer.lastRayTrace() ?: return false
         if (hit.type != HitResult.Type.BLOCK) return false
         return when (button) {
@@ -203,7 +242,7 @@ class MachineIoConfigPage(
         return true
     }
 
-    /** 服务端执行体；方向与开关都落在 trait 自己的同步字段上（AutoOutputTrait.java:61-74）。 */
+    /** 服务端执行体；方向与开关都落在 trait 自己的同步字段上（AutoOutputTrait.java:61-80）。 */
     private fun applyDirection(buf: RegistryFriendlyByteBuf, items: Boolean) {
         val ordinal = buf.readVarInt()
         val faces = Direction.entries.toTypedArray()
@@ -255,5 +294,46 @@ class MachineIoConfigPage(
 
         constructor(text: Component) : super(text)
         constructor(text: Supplier<Component>) : super(text)
+    }
+}
+
+/**
+ * 单格 schema。
+ *
+ * `MapSchema` 对单格算出的 focus 是方块角点 (0,0,0)（BlockPosUtil.getCenterF），而
+ * `SchemaWidget.draw` 每帧用 `schema.getFocus() + offset` 当相机 lookAt —— 不覆盖就会绕着角转。
+ */
+private class MachineSchema(block: BlockState) : MapSchema(mapOf(SCHEMA_ORIGIN to block)) {
+
+    override fun getFocus(): Vector3fc = SCHEMA_FOCUS
+}
+
+/**
+ * 在 3D 场景里画当前物品 / 流体输出面的面高亮。
+ *
+ * 钩子点选 `renderWorld`：此刻 `setupCamera` 已设好投影、`resetCamera` 还没跑
+ * （`BaseSchemaRenderer.draw` 的顺序是 setupCamera → renderWorld → raytrace → resetCamera），
+ * hover 高亮走的也是同一套 `createWorldRenderPose()` + `camera().pos()`（SchemaRenderer.onSuccessfulRayTrace）。
+ */
+private class IoFaceSchemaRenderer(
+    schema: ISchema,
+    private val faceMarkers: () -> List<Pair<Direction, Int>>
+) : GTMultiblockSchemaRenderer(schema) {
+
+    override fun renderWorld(bufferSource: MultiBufferSource.BufferSource, partialTick: Float) {
+        super.renderWorld(bufferSource, partialTick)
+
+        val markers = faceMarkers()
+        if (markers.isEmpty()) return
+
+        val pose = createWorldRenderPose()
+        val cameraPos = camera().pos()
+        markers.forEach { (face, color) ->
+            BlockHighlight(color, HIGHLIGHT_THICKNESS).renderHighlight(pose, SCHEMA_ORIGIN, face, cameraPos)
+        }
+
+        // BlockHighlight 只开了 blend、关了深度测试，画完还原，别污染后续 UI
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f)
+        RenderSystem.enableDepthTest()
     }
 }
