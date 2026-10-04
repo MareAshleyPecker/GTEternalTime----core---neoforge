@@ -423,6 +423,37 @@ Caused by: java.lang.ClassNotFoundException: rain.fox.gtetcore.integration.jade.
 
 ---
 
+## 17. MUI 的 `AbstractParentWidget.remove(IWidget)` 永远失败（严重度：高 · 状态：已绕开；上游 `Widget.equals` 写坏）
+
+**一句话**：MUI 3.3.1-SNAPSHOT 里 `parent.remove(someWidget)` **是个静默空操作** —— 控件既没被摘掉、也没被 dispose、更不报错，于是「换内容」的地方会出现新旧叠加（本项目实机现象：全屏多方块预览切换时两个结构叠在一起渲染）。
+
+**来源**：无报错（纯静默失效）。
+
+**成因**（`javap` 逐条核对）：
+
+1. `AbstractParentWidget.remove(I)` 偏移 0-5 调的是 `java/util/List.remove:(Ljava/lang/Object;)`（`children` 是 `java.util.ArrayList`，见 `<init>` 偏移 4-12）；
+2. `ArrayList.remove(Object)` 用 `o.equals(e)` 比较，`o` 就是我们传进去的那个控件；
+3. 而 `brachy.modularui.widget.Widget.equals` 偏移 0-14 是
+   `if (o == null || o.getClass() != Widget.class) return false;`
+   —— **任何 Widget 子类都不等于它自己**，所以 `remove(任何子类控件)` 一律返回 false。
+
+**旁证**：MUI 自己的 `DynamicWidget.updateChild` 也不用 `remove(IWidget)`，而是 `child.get().dispose()` + `MutableSingletonList.remove()`（无参）自己换。
+
+**处理**：改成**索引式**删除 ——
+
+```kotlin
+val index = parent.children.indexOfFirst { it === widget }
+if (index >= 0) parent.remove(index)
+```
+
+- `remove(int)` 是正常 List 语义；父级 `isValid()` 时它还会顺带 dispose 被摘的子树（想自己控制 dispose 时注意这一点）。
+- **纯新增不受影响**：`child(...)` 只是 `addChild` 内部的 `contains` 判断失效，不报错。
+- 本仓库已知受影响并已修的两处：`MultiblockPreviewFullscreen`（换多方块时摘旧预览 ⇒ 就是「叠加渲染」的成因）、`PreviewControls`（内嵌页摘 SchemaWidget 换成提示文字）。全仓 `\.remove\(` 已复查，其余调用都是集合/字符串语义，与本缺陷无关。
+
+**结论**：**在本项目里，凡是「运行时把某个控件摘掉」的写法一律走索引式 `remove(int)`**；引入 MUI 控件删除逻辑时先按这条检查。
+
+---
+
 ## 模板（新增条目时复制）
 
 ```markdown
