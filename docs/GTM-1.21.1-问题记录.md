@@ -327,9 +327,9 @@ net.neoforged.fml.ModLoadingException: Loading errors encountered:
 
 ---
 
-## 14. MUI × JEI：`jei.RecipeSlotAccessor` 注入失败（严重度：低 · 状态：**不修**，外部冲突）
+## 14. MUI × JEI：`jei.RecipeSlotAccessor` 注入失败（严重度：**高**（2026-10-04 上调，原判"低"） · 状态：**整合包级阻断**，见文末更新）
 
-**一句话**：GTCEu 捆绑的 MUI 3.3.1 里有个 accessor 要读 JEI `RecipeSlot` 的字段，而那字段从 JEI 19.50 起就被重构成了另一个类 —— 版本区间与 LDLib2 的硬性下限正好对不上，**没有可用的版本组合，也不值得补丁**。
+**一句话**：GTCEu 捆绑的 MUI 3.3.1 里有个 accessor 要读 JEI `RecipeSlot` 的字段，而那字段从 JEI 19.50 起就被重构成了另一个类 —— 而 **LDLib2 的硬性下限又把 JEI 顶到 ≥19.51**，于是两边必然对撞：**只要 `RecipeSlot` 这个类被加载（任何有 JEI 配方分类的 mod 都会触发），MUI 的 accessor APPLY 就失败、类加载不出来、JEI 渲染整体崩**。
 
 **来源**：
 
@@ -358,6 +358,28 @@ org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException:
 **实际影响（可忽略）**：MUI 的 `RecipeViewerHandler.getCurrent()` 选择顺序是 **EMI → REI → JEI → dummy**，装了 EMI 的包里 MUI 的槽位工厂拿到的是 **EMI** 实现；被削掉的只是 MUI 的 **JEI 槽位粘合层**（配料替换/轮换这类附加行为），GT 自己的 JEI 配方页（用 JEI 原生 API 建槽）不受影响，实测那页仍渲染正常。
 
 **结论**：等 MUI（或 GTM 捆绑的 MUI）自己支持 JEI 19.51+，不是我们能 patch 的层。
+
+---
+
+### 更新（2026-10-04）：严重度上调为「高」，整合包级阻断
+
+**触发**：用户在整合包里装了其它 AE2 附属后，JEI 渲染直接崩，报错链就是本条 —— `MixinApplyError: Mixin [modularui.mixins.json:jei.RecipeSlotAccessor] FAILED during APPLY` → `InvalidAccessorException: No candidates were found matching allIngredients:Ljava/util/List;`。
+
+**为什么在整合包里性质变了**：平时我们这里装了 EMI，MUI 的槽位工厂走 EMI 那条路，所以「只是日志里一行 FATAL、那页仍能渲染」。但 **accessor 的 APPLY 失败发生在 `RecipeSlot` 这个类被加载时** —— 任何有 JEI 配方分类的 mod 都会触发它，于是**整个整合包的 JEI 渲染一起崩**，与那些附属本身无关。
+
+**补齐的两条证据（本次 javap 核实）**：
+
+- MUI 的 `brachy.modularui.core.mixins.jei.RecipeSlotAccessor` 需要 `RecipeSlot` 上 **5 个成员**：`setRole` / `setCycler` / `getTooltipCallbacks` / `setAllIngredients` / `setDisplayIngredients`；
+- JEI **19.51** 的 `mezz.jei.library.gui.ingredients.RecipeSlot` 字段只剩 `role` / `ingredients`（新协作者）/ `cycler` / `tooltipCallbacks` / `rendererOverrides` / …，**`allIngredients` 与 `displayIngredients` 已不存在**（搬进 `RecipeSlotIngredients`），而且 `role`/`cycler`/`tooltipCallbacks` 都成了 **`private final`**（MUI 生成的 setter 即使能 APPLY，被调用时也会踩 final 语义）。
+- 回退目标版本（GTM 1.21.1 自己钉的）是 **`19.25.1.328`**，那一版字段齐全（见上文成因节）。
+
+**三条出路（代价从低到高）**：
+
+1. **撤回 LDLib2 依赖 ⇒ JEI 回退到 `19.25.1.328`**：当前**零实际代价** —— 我们的代码引用 `mezz.jei` 是 0 处，LDLib2 主代码引用也是 0（冒烟探针已删、S0 产物还在可整块删的边界里）。整合包 JEI 立刻恢复。
+2. **留着 LDLib2，改 MUI 的 JEI 桥**（GTM 补丁层）：唯一"正确"的修法，但要动 GTM jarJar 里的第三方库。
+3. **留着 LDLib2，给 JEI 补字段**（我们侧 mixin shim）：要解决「我们的 mixin 必须早于 MUI 的 accessor 应用」的顺序问题，且躲不开 `role`/`cycler`/`tooltipCallbacks` 已 final 的坑；属于往第三方类注水。
+
+**当前状态**：等用户拍板（本仓库默认倾向 1）。**只要采用 LDLib2，就必须同时做 2**，否则这个崩会重演。
 
 ---
 
