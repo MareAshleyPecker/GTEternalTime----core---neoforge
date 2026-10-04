@@ -1,5 +1,6 @@
-// 1.21.1	2026-10-04T11:46:37.8092957	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
+// 1.21.1	2026-10-04T12:02:52.9678591	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
 e99760dd20a671e466dcdb8019dba5d041672b02 assets/gtetscore/blockstates/master_tower.json
+0a45bdb8d45a1394f42796758b360d225b70e6dd assets/gtetscore/blockstates/me_dual_stocking_input.json
 e55162446ffe015cdf9c6a3d3c4eaf2dcdc09acd assets/gtetscore/blockstates/me_pattern_buffer_luv.json
 c18428e1d189dc3da88d1c9fcb0e2d7fb4bc6435 assets/gtetscore/blockstates/me_pattern_buffer_proxy_luv.json
 3cb432072f11d03b3dd12f5850efbc7ed3a17ef5 assets/gtetscore/blockstates/me_pattern_buffer_uev.json
@@ -152,9 +153,10 @@ d217b70c1f081350fa20a6d8dc38d30be7c119ed assets/gtetscore/blockstates/wireless_e
 66d61205a24b1bb26f8da7c3eb849a4a1bd99aa7 assets/gtetscore/blockstates/wireless_energy_hatch_65536a_uv.json
 5f5674afd7549d2bc796bb45dffae74b227a952a assets/gtetscore/blockstates/wireless_energy_hatch_65536a_uxv.json
 96ef1681cda334894a138ff5cbeb73d2c3139105 assets/gtetscore/blockstates/wireless_energy_hatch_65536a_zpm.json
-293e7132c0583aca697400b17f2d9d28efda651e assets/gtetscore/lang/en_ud.json
-2bc0ed48ef982e27cd010aaf368d503432ea5e6c assets/gtetscore/lang/en_us.json
+6e857a9cdba31945ad70037b58a8e837f75c6be1 assets/gtetscore/lang/en_ud.json
+a3e2fdb58feb5ccdadf05d8ba95928f774ba842f assets/gtetscore/lang/en_us.json
 743b128c72f5c164f04b348b059ab6f10f81a53c assets/gtetscore/models/block/machine/master_tower.json
+c3218f5edf52bf45d7c8f0164d80af0b56b980c5 assets/gtetscore/models/block/machine/me_dual_stocking_input.json
 22c44e0fefceaba0ef6a667a7e9822d277effefc assets/gtetscore/models/block/machine/me_pattern_buffer_luv.json
 812486b7cf3192b6334fa3390950262a69ff2282 assets/gtetscore/models/block/machine/me_pattern_buffer_proxy_luv.json
 e0081b2e8c28523cdbaa0f186503eb22f477198c assets/gtetscore/models/block/machine/me_pattern_buffer_uev.json
@@ -311,6 +313,7 @@ ea8d89511e41984637d8ab5eefd2736c5cb89fa3 assets/gtetscore/models/item/advanced_t
 2dee6ef1ddb1df352cdb4f64650114782551ecab assets/gtetscore/models/item/clock_of_time_sequence.json
 ea8d89511e41984637d8ab5eefd2736c5cb89fa3 assets/gtetscore/models/item/ldlib2_probe.json
 d6044c69237b66100d337c6671601de76bb87c57 assets/gtetscore/models/item/master_tower.json
+9afcbeba9ba9666b92c5aec8b6d2042487864480 assets/gtetscore/models/item/me_dual_stocking_input.json
 ebbe67afc10e2b287a96d94a24c9083f5d9611ce assets/gtetscore/models/item/me_pattern_buffer_luv.json
 d07aeb44c600bad5449683f805e378b5d5470960 assets/gtetscore/models/item/me_pattern_buffer_proxy_luv.json
 ff3822bf87afdde6bdef3df220cebd6090cfa559 assets/gtetscore/models/item/me_pattern_buffer_uev.json

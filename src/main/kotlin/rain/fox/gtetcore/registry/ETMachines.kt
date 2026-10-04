@@ -11,6 +11,7 @@ import com.gregtechceu.gtceu.api.machine.trait.recipe.RecipeLogic
 import com.gregtechceu.gtceu.api.registry.registrate.entry.MachineEntry
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels.createWorkableTieredHullMachineModel
 import rain.fox.gtetcore.common.data.machine.hatch.ETOverclockHatches
+import rain.fox.gtetcore.common.data.machine.hatch.ETDualStockingHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETMEPatternBufferHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETThreadHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETTagFilterHatches
@@ -145,6 +146,17 @@ object ETMachines {
     @JvmField
     val TAG_FILTER_HATCHES: List<MachineEntry<MachineDefinition>> =
         ETTagFilterHatches.register(ETRegistrate.REGISTRATE)
+
+    /**
+     * AE2 二合一库存件 1 件（ME 二合一库存输入总成：一块方块同时挂 `IMPORT_ITEMS` + `IMPORT_FLUIDS`）；
+     * AE2 缺席时返回空表。
+     *
+     * ⚠️ 同样排在 [MASTER_TOWER] 之前（本族复用 GTM 的能力表，`PartAbility#getAllBlocks()` 首取即定）。
+     * ⚠️ 只做二合一这一件：普通库存输入总线 / 输入仓由 GTM 8.0.0 自己提供（`GTAEMachines`），不重复移植。
+     */
+    @JvmField
+    val DUAL_STOCKING_HATCHES: List<MachineEntry<MachineDefinition>> =
+        ETDualStockingHatches.register(ETRegistrate.REGISTRATE)
 
     /**
      * **主控塔**（本工程第一台多方块控制器）。

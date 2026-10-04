@@ -1,5 +1,6 @@
 {
   "block.gtetscore.master_tower": "主控塔",
+  "block.gtetscore.me_dual_stocking_input": "ME 二合一库存输入总成",
   "block.gtetscore.me_pattern_buffer_luv": "ME 样板总成（LuV · 27 样板）",
   "block.gtetscore.me_pattern_buffer_proxy_luv": "ME 样板总成镜像（LuV · 全档通用）",
   "block.gtetscore.me_pattern_buffer_uev": "ME 样板总成（UEV · 126 样板）",
