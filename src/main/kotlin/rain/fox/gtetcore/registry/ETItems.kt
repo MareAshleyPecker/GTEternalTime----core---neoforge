@@ -7,11 +7,13 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.common.item.terminal.AdvancedTerminalBehavior
+import rain.fox.gtetcore.common.item.recipe.RecipeEditorBehavior
 import rain.fox.gtetcore.common.item.timeflow.TimeClockBehavior
 import rain.fox.gtetcore.common.item.tool.StructureDetectBehavior
 import rain.fox.gtetcore.common.item.tool.StructureWriteBehavior
 import rain.fox.gtetcore.common.item.tool.TerminalBehavior
 import rain.fox.gtetcore.data.lang.AdvancedTerminalLang
+import rain.fox.gtetcore.data.lang.RecipeEditorLang
 import rain.fox.gtetcore.data.lang.StructureToolLang
 import rain.fox.gtetcore.data.lang.TimeClockLang
 import rain.fox.gtetcore.test.Ldlib2ProbeItem
@@ -181,6 +183,40 @@ object ETItems {
                         TooltipBehavior { lines ->
                             lines.add(Component.translatable(StructureToolLang.TOOLTIP_DETECT_1))
                             lines.add(Component.translatable(StructureToolLang.TOOLTIP_DETECT_2))
+                        }
+                    )
+                }
+                .register()
+        }
+    }
+
+    /**
+     * 配方编辑器 — 右键空气开面板，草稿存在数据组件 `gtetscore:recipe_editor` 上，
+     * 导出成 Kotlin 代码片段（目录走 `GtetConfig.recipeExportDirectory()`）。
+     *
+     * 交互与导出在 [rain.fox.gtetcore.common.item.recipe.RecipeEditorBehavior]，
+     * 面板在 `client/mui/RecipeEditorPanel`；贴图沿用原版木棍（与三件结构工具同款，不新增素材）。
+     */
+    @JvmField
+    val RECIPE_EDITOR: ItemEntry<ComponentItem> = run {
+        LangUtil.ITEM_LANG["recipe_editor"] = "配方编辑器"
+
+        ETRegistrate.REGISTRATE.inTab(ETCreativeModeTabs.ITEM) {
+            ETRegistrate.REGISTRATE
+                .item("recipe_editor", ::ComponentItem)
+                .noDefaultTab()
+                .lang("Recipe Editor")
+                .properties { properties -> properties.stacksTo(1) }
+                .model { ctx, provider ->
+                    provider.generated(ctx, ResourceLocation.withDefaultNamespace("item/stick"))
+                }
+                .onRegister { item ->
+                    item.attachComponents(
+                        RecipeEditorBehavior,
+                        TooltipBehavior { lines ->
+                            lines.add(Component.translatable(RecipeEditorLang.TOOLTIP_OPEN))
+                            lines.add(Component.translatable(RecipeEditorLang.TOOLTIP_KINDS))
+                            lines.add(Component.translatable(RecipeEditorLang.TOOLTIP_EXPORT))
                         }
                     )
                 }

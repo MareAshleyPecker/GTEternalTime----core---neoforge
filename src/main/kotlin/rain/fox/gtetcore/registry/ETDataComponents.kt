@@ -7,6 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs
 import net.neoforged.neoforge.registries.DeferredHolder
 import net.neoforged.neoforge.registries.DeferredRegister
 import rain.fox.gtetcore.GTETSCore
+import rain.fox.gtetcore.common.item.recipe.RecipeEditorData
 import rain.fox.gtetcore.common.item.terminal.AdvancedTerminalSettings
 import rain.fox.gtetcore.common.item.terminal.TerminalData
 import rain.fox.gtetcore.common.item.timeflow.TimeClockState
@@ -99,6 +100,21 @@ object ETDataComponents {
             DataComponentType.builder<StructureDetectData>()
                 .persistent(StructureDetectData.CODEC)
                 .networkSynchronized(StructureDetectData.STREAM_CODEC)
+                .build()
+        })
+
+    /**
+     * 配方编辑器（`recipe_editor`）的整份草稿（老工程物品 NBT 的 `recipe_editor` 子树）。
+     *
+     * 必须 `networkSynchronized`：面板在客户端与服务端各建一次，客户端那一刻要靠它拿到
+     * 「这次打开时草稿长什么样」（配方种类 / 各段槽数 / 代码预览文案），否则会先闪一下空状态。
+     */
+    @JvmField
+    val RECIPE_EDITOR: DeferredHolder<DataComponentType<*>, DataComponentType<RecipeEditorData>> =
+        REGISTRY.register("recipe_editor", Supplier {
+            DataComponentType.builder<RecipeEditorData>()
+                .persistent(RecipeEditorData.CODEC)
+                .networkSynchronized(RecipeEditorData.STREAM_CODEC)
                 .build()
         })
 }

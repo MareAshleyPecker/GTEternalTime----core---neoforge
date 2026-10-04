@@ -1,4 +1,4 @@
-// 1.21.1	2026-10-03T23:05:23.4944615	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
+// 1.21.1	2026-10-04T11:29:44.8575713	Registrate Provider for gtetscore [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
 e99760dd20a671e466dcdb8019dba5d041672b02 assets/gtetscore/blockstates/master_tower.json
 e4dd6e15ac5b5d65ac55e568eca4d9fc0c33af7e assets/gtetscore/blockstates/modular_test_machine.json
 1cbd74ee434d591e54b2844b76391a215a744816 assets/gtetscore/blockstates/overclock_hatch_1024x_saving_max.json
@@ -145,8 +145,8 @@ d217b70c1f081350fa20a6d8dc38d30be7c119ed assets/gtetscore/blockstates/wireless_e
 66d61205a24b1bb26f8da7c3eb849a4a1bd99aa7 assets/gtetscore/blockstates/wireless_energy_hatch_65536a_uv.json
 5f5674afd7549d2bc796bb45dffae74b227a952a assets/gtetscore/blockstates/wireless_energy_hatch_65536a_uxv.json
 96ef1681cda334894a138ff5cbeb73d2c3139105 assets/gtetscore/blockstates/wireless_energy_hatch_65536a_zpm.json
-760892cc8389a4a2c8c397d7464ff79a403613f8 assets/gtetscore/lang/en_ud.json
-8139cd3c1d56a0b9613b7ca60d013cc2ac47eecb assets/gtetscore/lang/en_us.json
+1016dcbfb88d7d8cc6c63a2e657fc83aaaf2d67c assets/gtetscore/lang/en_ud.json
+2b24e4062a3057fdb0fb214b3306eb57e8764d1c assets/gtetscore/lang/en_us.json
 743b128c72f5c164f04b348b059ab6f10f81a53c assets/gtetscore/models/block/machine/master_tower.json
 15c75b85283280466f18c2e730bc8cae3eb5a46e assets/gtetscore/models/block/machine/modular_test_machine.json
 5fe25e63d035bf18d8a97c6ce9b3a585b0f02a36 assets/gtetscore/models/block/machine/overclock_hatch_1024x_saving_max.json
@@ -316,6 +316,7 @@ de9f08cc49f0e01a88105ef577b1a84e2b13b147 assets/gtetscore/models/item/overclock_
 58fdd4bf6091241f6521c2f392d11bad4b615b81 assets/gtetscore/models/item/overclock_hatch_64x_perfect.json
 6846577ebf6a9d98f13fa9ffe27a5ab9fdae5d47 assets/gtetscore/models/item/overclock_hatch_64x_saving.json
 c6d21877dc315f6db72179af1969816a258a4620 assets/gtetscore/models/item/parallel_hatch_iv.json
+744fcbaebd95fae62e2d4cbe57af5eecf8d92c98 assets/gtetscore/models/item/recipe_editor.json
 744fcbaebd95fae62e2d4cbe57af5eecf8d92c98 assets/gtetscore/models/item/structure_checker.json
 744fcbaebd95fae62e2d4cbe57af5eecf8d92c98 assets/gtetscore/models/item/structure_detect.json
 744fcbaebd95fae62e2d4cbe57af5eecf8d92c98 assets/gtetscore/models/item/structure_tools.json

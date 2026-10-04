@@ -54,6 +54,9 @@ object GtetConfig {
     /** 结构导出文件的输出目录（相对游戏目录）。 */
     const val default_export_directory: String = "GtetExport/multiblock"
 
+    /** 配方编辑器导出代码的目录（相对游戏目录）；两类导出统一收在 `GtetExport/` 下。 */
+    const val default_recipe_export_directory: String = "GtetExport/recipes"
+
     /** 选区覆盖层颜色：`R;G;B;线透明度;填充透明度`。 */
     const val default_write_overlay_color: String = "0.2;0.9;0.2;1.0;0.15"
 
@@ -85,6 +88,7 @@ object GtetConfig {
 
     val export_mode_enabled: ModConfigSpec.BooleanValue
     val export_directory: ModConfigSpec.ConfigValue<String>
+    val recipe_export_directory: ModConfigSpec.ConfigValue<String>
 
     val write_overlay_color: ModConfigSpec.ConfigValue<String>
     val detect_overlay_color: ModConfigSpec.ConfigValue<String>
@@ -190,9 +194,8 @@ object GtetConfig {
 
         /* --------------------------------------------------------------------------------------- */
 
-        // ── dev：结构导出（老工程 [dev] 段的键名与默认值一字不差）──
-        // ⚠️ 老工程 [dev] 段里另有 recipeExportDirectory（配方编辑器切片）与 SendThreadDiagnosticlog（线程诊断），
-        //    那两项不属于本切片，没有搬过来。
+        // ── dev：结构导出 + 配方编辑器导出（老工程 [dev] 段的键名与默认值一字不差）──
+        // ⚠️ 老工程 [dev] 段里另有 SendThreadDiagnosticlog（线程诊断），那项不属于本切片，没有搬过来。
         builder.comment("开发者选项", "Developer options").push("dev")
 
         export_mode_enabled = builder.comment(
@@ -205,10 +208,16 @@ object GtetConfig {
             "Output directory for exported block patterns (relative to the game directory)."
         ).define("exportDirectory", default_export_directory)
 
+        recipe_export_directory = builder.comment(
+            "配方编辑器导出代码的目录（相对游戏目录）；每个配方一个 .kt 片段，重复导出直接覆盖。",
+            "Output directory for exported recipe code (relative to the game directory).",
+            "One .kt snippet per recipe; re-exporting overwrites it."
+        ).define("recipeExportDirectory", default_recipe_export_directory)
+
         builder.pop()
 
         /* --------------------------------------------------------------------------------------- */
-        
+
         // ── overlay：结构工具覆盖层（颜色与检测框停留时间）──
         builder.comment(
             "结构工具覆盖层：颜色与检测框停留时间（只在客户端渲染时用）",
@@ -291,6 +300,9 @@ object GtetConfig {
 
     /** 结构导出的输出目录（相对游戏目录），默认 `GtetExport/multiblock`。 */
     fun exportDirectory(): String = stringValue(export_directory, default_export_directory)
+
+    /** 配方编辑器导出代码的目录（相对游戏目录），默认 `GtetExport/recipes`。 */
+    fun recipeExportDirectory(): String = stringValue(recipe_export_directory, default_recipe_export_directory)
 
     /** 选区覆盖层颜色串（`R;G;B[;线透明度;填充透明度]`）。 */
     fun writeOverlayColor(): String = stringValue(write_overlay_color, default_write_overlay_color)
