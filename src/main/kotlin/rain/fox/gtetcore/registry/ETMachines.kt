@@ -11,7 +11,9 @@ import com.gregtechceu.gtceu.api.machine.trait.recipe.RecipeLogic
 import com.gregtechceu.gtceu.api.registry.registrate.entry.MachineEntry
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels.createWorkableTieredHullMachineModel
 import rain.fox.gtetcore.common.data.machine.hatch.ETOverclockHatches
+import rain.fox.gtetcore.common.data.machine.hatch.ETMEPatternBufferHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETThreadHatches
+import rain.fox.gtetcore.common.data.machine.hatch.ETTagFilterHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETTimeFlowHatches
 import rain.fox.gtetcore.common.data.machine.hatch.ETWirelessEnergyHatches
 import rain.fox.gtetcore.common.data.machine.multiblock.ETMasterTower
@@ -86,6 +88,16 @@ object ETMachines {
     val PARALLEL_HATCHES: List<MachineEntry<MachineDefinition>> = listOf(parallel_hatch_iv)
 
     /**
+     * ME 样板总成族（四档总成 + 一件通用镜像）。
+     *
+     * ⚠️ AE2 没装时 `register` 第一句就返回空表（这些类直接引用 `appeng.*`）。
+     * 本族复用 GTM 的 `IMPORT_ITEMS` / `IMPORT_FLUIDS`，消费它的多方块要在本行之后构造结构谓词。
+     */
+    @JvmField
+    val ME_PATTERN_BUFFERS: List<MachineEntry<MachineDefinition>> =
+        ETMEPatternBufferHatches.register(ETRegistrate.REGISTRATE)
+
+    /**
      * 线程仓全族 8 档：ZPM 4 / UV 8 / UHV 16 / UEV 32 / UIV 64 / UXV 128 / OpV 256 / MAX 512。
      *
      * ⚠️ 本行必须排在**任何消费线程仓的多方块**之前（同 [TIME_FLOW_HATCHES] 的那条顺序约定：
@@ -122,6 +134,17 @@ object ETMachines {
     @JvmField
     val WIRELESS_ENERGY_HATCHES: List<MachineEntry<MachineDefinition>> =
         ETWirelessEnergyHatches.register(ETRegistrate.REGISTRATE)
+
+    /**
+     * AE2 标签库存件全族 2 件（ME 标签库存输入总线 / 输入仓）；AE2 缺席时返回空表。
+     *
+     * ⚠️ 本行必须排在 [MASTER_TOWER] 之前：本族复用 GTM 自己的 `IMPORT_ITEMS` / `IMPORT_FLUIDS`，
+     * 而 `PartAbility#getAllBlocks()` 是懒记忆化的（首取即定），消费这两个能力的多方块
+     * 要在本行之后才构造结构谓词（与 [TIME_FLOW_HATCHES] 同一条顺序约定）。
+     */
+    @JvmField
+    val TAG_FILTER_HATCHES: List<MachineEntry<MachineDefinition>> =
+        ETTagFilterHatches.register(ETRegistrate.REGISTRATE)
 
     /**
      * **主控塔**（本工程第一台多方块控制器）。

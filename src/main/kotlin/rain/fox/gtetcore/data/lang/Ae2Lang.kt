@@ -67,6 +67,22 @@ object Ae2Lang {
     /** 说明行 3：留空语义与定量 / 保底的冲突。 */
     const val HINT_3: String = PREFIX + "hint.3"
 
+    /**
+     * 两件标签库存件共用的**功能说明** tooltip（跟在 GTM 那两行名称说明之后）。
+     *
+     * 方块 tooltip 键，不是面板键 —— 键名沿用老工程，中英一字不差。
+     */
+    const val TOOLTIP: String = PREFIX + "tooltip"
+
+    /**
+     * 「多方块共享」那条 tooltip 的键（两件共用）。
+     *
+     * ⚠️ 两件的共享开关**默认关（隔离）**、可在「标签过滤」面板里切换，所以光留 GTM 的
+     * `gtceu.part_sharing.disabled`（= "Multiblock Sharing §4Disabled"）会让玩家以为改不了 ——
+     * 那条保留（它描述的正是默认状态），后面再补这一条说明「可以切」。
+     */
+    const val SHARE_TOOLTIP: String = PREFIX + "share.tooltip"
+
     /** 幂等登记（同名键重复登记只是覆盖同一张表）。 */
     @JvmStatic
     fun register() {
@@ -79,6 +95,14 @@ object Ae2Lang {
         LangUtil.add(HINT_1, "Also accepts , and #", "也认 , 与 # 前缀")
         LangUtil.add(HINT_2, "Phantom slot fills tags", "幻影槽放样本自动填标签")
         LangUtil.add(HINT_3, "N must be >= min count", "N 需不小于保底数量")
+
+        // 两条方块 tooltip（键在 ETTagFilterHatches 里被两件库存件引用）
+        LangUtil.add(TOOLTIP, "AE tag filtering + batch pull", "AE 标签过滤 + 定量拉取")
+        LangUtil.add(
+            SHARE_TOOLTIP,
+            "Multiblock sharing: isolated by default, toggle in the Tag Filter panel",
+            "多方块共享：默认隔离，可在「标签过滤」面板里切换"
+        )
 
         LangUtil.add(SHARE, "Multiblock sharing", "多方块共享")
         LangUtil.add(SHARE_ON, "Allowed", "允许共享")

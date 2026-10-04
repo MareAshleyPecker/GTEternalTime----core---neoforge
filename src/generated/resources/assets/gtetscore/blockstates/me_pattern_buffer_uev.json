@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "gtetscore:block/machine/me_pattern_buffer_uev",
+      "x": 90
+    },
+    "facing=east": {
+      "model": "gtetscore:block/machine/me_pattern_buffer_uev",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "gtetscore:block/machine/me_pattern_buffer_uev"
+    },
+    "facing=south": {
+      "model": "gtetscore:block/machine/me_pattern_buffer_uev",
+      "y": 180
+    },
+    "facing=up": {
+      "gtceu:z": 180,
+      "model": "gtetscore:block/machine/me_pattern_buffer_uev",
+      "x": 270
+    },
+    "facing=west": {
+      "model": "gtetscore:block/machine/me_pattern_buffer_uev",
+      "y": 270
+    }
+  }
+}

@@ -6,7 +6,9 @@
   "mixins": [
     "gtm.MachineUIPanelBuilderMixin",
     "gtm.AutoOutputTraitMixin",
-    "gtm.MixinPredicatesAutoAbilities"
+    "gtm.MixinPredicatesAutoAbilities",
+    "gtm.IMEPatternBufferAccess",
+    "gtm.MixinMEPatternBufferCapacity"
   ],
   "client": [
     "modularui.debug.IThemeEncoderMixin",
