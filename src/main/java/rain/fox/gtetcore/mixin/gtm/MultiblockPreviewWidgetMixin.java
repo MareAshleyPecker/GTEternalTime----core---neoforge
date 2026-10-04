@@ -49,6 +49,6 @@ public class MultiblockPreviewWidgetMixin {
         }
 
         // mixin 里的 `this` 静态类型是 mixin 自己，得先过一遍 Object 才能转成目标类型
-        PreviewControls.attach((MultiblockPreviewWidget) (Object) this, definition, width, height);
+        PreviewControls.attach((MultiblockPreviewWidget) (Object) this, definition);
     }
 }

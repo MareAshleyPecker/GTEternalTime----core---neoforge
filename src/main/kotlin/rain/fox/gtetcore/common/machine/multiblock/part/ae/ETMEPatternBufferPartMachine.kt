@@ -161,17 +161,27 @@ class ETMEPatternBufferPartMachine(info: BlockEntityCreationInfo) : MEPatternBuf
      * 一页的格数   = 9 × 7 × 2 = 126              （[PAGE_CAPACITY]）
      * 页数         = ⌈容量 / 126⌉                 （216 → 2 页、512 → 5 页）
      * 某一页的块数 = clamp(⌈这一页的格数 / 63⌉, 1, 2)；每块行数 = ⌈这一页的格数 / (9 × 块数)⌉
-     * 网格区(宽×高) = 按"一页铺满"算 ⇒ 340 × 142，**翻页时一个像素都不变**
+     * 网格盒(宽×高) = 列数 × 18, 行数 × 18 ⇒ 按"一页铺满"算，**翻页时一个像素都不变**
      *
-     * 档位  容量  块数×行数   网格区(宽×高)
-     * LuV    27   1 × 3      178 ×  70
-     * UV     63   1 × 7      178 × 142
-     * UEV   126   2 × 7      340 × 142
-     * UXV   216   2 × 7      340 × 142（2 页）
+     * 档位  容量  块数×行数   网格盒(宽×高)
+     * LuV    27   1 × 3      162 ×  54   （与 GTM 原生 27 格面板逐像素相同）
+     * UV     63   1 × 7      162 × 126
+     * UEV   126   2 × 7      324 × 126
+     * UXV   216   2 × 7      324 × 126（2 页）
      * ```
-     * ⚠️ 网格区尺寸是这些数；**面板本身**由 MUI 按内容自适应（`MachineUIPanel#mainContents` 是
-     * `coverChildren(169, 77)` + 外层 `coverChildren()`），所以 340×142 的网格会撑出比 GTM 那件
-     * 更宽的面板 —— 宽度上限就是靠 [MAX_BLOCKS] 卡在 340px，高度那侧靠翻页。
+     *
+     * ⚠️ **这个盒子必须显式钉在页容器上**（`PatternPages().size(...)`）：`PagedWidget` 是
+     * `Widget<W>`、**不是**布局父级（javap：`PagedWidget extends Widget`），页子件是按它的 *area* 摆的
+     * （`IWidget.getParentArea()` 默认实现就是 `getParent().getArea()`）。而没设尺寸的 `Widget` 会退到
+     * `getDefaultWidth/Height()`；`MultiblockPreviewWidget.<init>` 之外这些控件在构造期 `isValid()` 为假，
+     * `Widget.getDefaultWidth()` 里那条分支直接 `bipush 18` ⇒ 页容器只有 **18×18**，
+     * 于是 324×126 的网格（`Grid` 里 `leftRel(0.5f)` 是按父宽居中：`Unit.getAnchor()` 对
+     * `autoAnchor && relative && value<1` 返回 value 本身，0.5 就是居中）会往左右各探出 153px、
+     * 并且盖住流式布局排在它后面的翻页条与上方的网络状态行。
+     *
+     * ⚠️ **面板本身**由 MUI 按内容自适应（`MachineUIPanel#mainContents` 是 `coverChildren(169, 77)`
+     * + 外层 `coverChildren()`），所以 324×126 的网格会撑出比 GTM 那件更宽的面板 —— 宽度上限就是靠
+     * [MAX_BLOCKS] 卡在 324px，高度那侧靠翻页。
      * 老工程 LDLib 时代那套「窗口高 236px / 1080p 缩放放不下」的账在 MUI 里不成立，见
      * `ETPatternBufferUIWidget` 被删掉的理由（报告里有）。
      *
@@ -228,22 +238,25 @@ class ETMEPatternBufferPartMachine(info: BlockEntityCreationInfo) : MEPatternBuf
         val panelBlocks = blocksOf(filled)
         val panelRows = rowsOf(filled, panelBlocks)
         val columns = BLOCK_COLUMNS * panelBlocks
+        val gridWidth = SLOT * columns
         val gridHeight = SLOT * panelRows
 
         // ⚠️ 组名带本 mod 前缀：同一时刻可能还开着 GTM 自己的 me_pattern_buffer 面板，别撞组名
         val group = SlotGroup(SLOT_GROUP, BLOCK_COLUMNS, 0, true)
-        val pages = PatternPages()
+        // ⚠️ 页容器**必须显式给尺寸**：`PagedWidget` 不是布局父级，页子件按它的 area 定位，
+        // 不给尺寸就退到 `Widget.getDefaultWidth()` 的 18×18（详见 buildMainUI 的注释）
+        val pages = PatternPages().size(gridWidth, gridHeight)
         for (p in 0 until pageCount) {
             val count = PAGE_CAPACITY.coerceAtMost(capacity - p * PAGE_CAPACITY)
             val base = p * PAGE_CAPACITY
             pages.addPage(
                 Grid()
                     .name("pattern_page_$p")
-                    .height(gridHeight)
+                    // 两轴都钉死 = 与页容器同尺寸：网格整齐、翻页时盒子不变，也不依赖 coverChildren 推算
+                    .size(gridWidth, gridHeight)
                     .minElementMargin(0, 0)
                     .minColWidth(SLOT)
                     .minRowHeight(SLOT)
-                    .leftRel(0.5f)
                     .gridOfSizeWidth(count, columns, Grid.GridPosMapper<ItemSlot> { _, _, index ->
                         patternSlot(inventory, base + index, group)
                     })
@@ -263,6 +276,9 @@ class ETMEPatternBufferPartMachine(info: BlockEntityCreationInfo) : MEPatternBuf
                 Flow.row()
                     .coverChildren()
                     .childPadding(2)
+                    // 页容器有确定宽度 ⇒ 这一排按父宽居中（`leftRel(0.5f)` 的 anchor 就是 0.5），
+                    // 显式定位后不会走 Flow 的 crossAxisAlignment 分支
+                    .leftRel(0.5f)
                     .marginTop(2)
                     .child(
                         pageButton("<") {

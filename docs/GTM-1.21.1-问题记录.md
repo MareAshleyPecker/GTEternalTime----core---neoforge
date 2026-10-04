@@ -454,6 +454,29 @@ if (index >= 0) parent.remove(index)
 
 ---
 
+## 18. `PagedWidget` 不是布局父级，页容器不给尺寸会被解成 18×18（严重度：中 · 状态：已修；MUI 的隐藏默认值）
+
+**一句话**：MUI 的 `PagedWidget` **不是 `ParentWidget`**、不参与布局；页里的子件是按**页容器自己的 area** 摆的，而没有任何尺寸单位的控件会被解成**主题默认 18×18** —— 于是「18 列 × 18px = 324 宽」的网格从一个 18 宽、`leftRel(0.5f)`（= 按父宽居中）的盒子里画出来，x 直接算成 `0.5×18 − 324×0.5 = −153`，**左右各探出 153px**，并且只被 flow 留了 18px 高、把下面那排翻页条和上面那行状态文字一起盖住。
+
+**来源**：无报错（纯布局错位）。
+
+**成因**（`javap` + MUI 反编译逐条核对）：
+
+- `PagedWidget extends Widget`（不是 `ParentWidget`、不实现 `ILayoutWidget`），只 `getChildren()` 返回 pages、`setPage` 用 `setEnabled(false/true)` 切页；
+- `IWidget.getParentArea()` 默认实现就是 `getParent().getArea()`；
+- 没设尺寸的控件在 `DimensionSizer.apply` 走 `start==null && end==null && size==null` 分支 → `Widget.getDefaultWidth()`：
+  `return this.isValid() ? getWidgetTheme(...).theme().getDefaultWidth() : 18;`
+  而 MUI 内置 FALLBACK 主题就是 `WidgetTheme.darkTextNoShadow(18, 18, null)`（`IThemeApi.java:48`）⇒ **18×18**；
+- `leftRel(0.5f)` 是「按父宽居中」：`Unit.getAnchor()` 在 `autoAnchor && isRelative() && value<1f` 时返回 `value`；`DimensionSizer.calcPoint` 里 `val = anchor*parentSize; if (anchor != 0) val -= width*anchor;`。
+
+**处理**：给页容器**显式尺寸** —— 网格多宽就给它多宽（`PatternPages().size(gridWidth, gridHeight)`），页内的 Grid 同尺寸并**去掉 `leftRel`**（不再需要居中），翻页排再单独 `leftRel(0.5f)`（此时父宽确定，不构成循环依赖）。
+
+**佐证**：GTM 自己那份样板总成**根本不用 `PagedWidget`**，Grid 是 `flow.col().coverChildren()` 的直接子件；GTM 全仓仅有的两处 `PagedWidget` **都显式给了尺寸**（`ItemMagnetBehavior.java:105-108` 的 `.size(150, 55)`）。
+
+**结论**：在 MUI 里用 `PagedWidget`（以及任何非 `ParentWidget` 的内容宿主）**必须显式给尺寸**，否则它就是一个 18×18 的隐形盒子，内容会以它为参照错位；`leftRel/rightRel` 这类百分比在「父级尺寸不确定」时也会变成漂移来源。
+
+---
+
 ## 模板（新增条目时复制）
 
 ```markdown
