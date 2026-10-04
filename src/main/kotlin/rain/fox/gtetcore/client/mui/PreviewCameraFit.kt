@@ -53,6 +53,19 @@ object PreviewCameraFit {
         widget.scale(fitDistance(schema)).yaw(DEFAULT_YAW)
     }
 
+    /**
+     * 同一台机器换档（换 substructure）之后重新取景。
+     *
+     * 只重算距离：`SchemaWidget.draw` 每帧都用 `schema().getFocus()` 重建注视点，而 `getFocus()` 就是
+     * `MutableSchema.center`（`setBlocks` 会更新），结构中心变了相机会自动跟过去；玩家的 yaw / pitch /
+     * 中键平移保持不变，只把新的包围球重新塞进视口。
+     */
+    @JvmStatic
+    fun refit(widget: SchemaWidget?, schema: MutableSchema?) {
+        if (widget == null) return
+        widget.scale(fitDistance(schema))
+    }
+
     /** 「重置视角」：恢复 [applyInitial] 的取景，并把中键平移带跑的 `offset` 归零。 */
     @JvmStatic
     fun reset(widget: SchemaWidget?, schema: MutableSchema?) {

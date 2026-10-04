@@ -26,6 +26,7 @@ import org.lwjgl.glfw.GLFW
 import rain.fox.gtetcore.GTETSCore
 import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
 import java.util.Comparator
+import java.util.function.Supplier
 
 /**
  * 多方块 3D 预览的全屏化。
@@ -147,11 +148,16 @@ private fun buildFullscreenPanel(definition: MultiblockMachineDefinition,
 }
 
 /**
- * 全屏内容：3D 铺满 + 左下部件数 + 右下按钮（含「上一个 / 下一个」），并负责切换多方块。
+ * 全屏内容：3D 铺满 + 左下部件数 + 右下按钮（「上一个 / 下一个多方块」+「上一档 / 下一档结构」），
+ * 并负责切换多方块与切换档位。
  *
  * <p>候选来自 GTM 注册表**只读枚举**（`GTRegistries.MACHINES`，与 `MultiblockInfoJeiCategory.registerRecipes`
  * 同一套筛选），按 id 排序 ⇒ 顺序稳定、不硬编码清单；`isRenderXEIPreview` 为假的（GTM 自己不给预览的）以及
  * 拿不到 `main` 图案的定义会被过滤掉。切换时重建预览控件（取景由 `PreviewCameraFit` 按新结构重算）与左下部件数列表。
+ *
+ * <p>**两排箭头**：右下最下排是「多方块」（`[◀][▶]`，原样保留），它上面一排是「档位」
+ * （`[档位名 (i/n)][◀][▶]`，只有该机器注册了多个 substructure 时才出现）。换多方块会重建整个预览控件
+ * 并把档位重置回 `main`；换档不动控件，只把那一档结构重灌进 schema（见 [PreviewSubstructure]）。
  */
 private class FullscreenSwitcher(
     private val panel: ModularPanel<*>,
@@ -166,32 +172,85 @@ private class FullscreenSwitcher(
     private var parts: IWidget? = null
     private var label: IWidget? = null
     private var row: IWidget? = null
+    private var tierRow: IWidget? = null
+
+    /** 当前机器注册的 substructure 名（`main` 在最前）；`tiers[0]` 就是 GTM 预览默认渲染的那一套。 */
+    private var tiers: List<String> = PreviewSubstructure.names(definition)
+
+    /** 当前渲染的档位下标（0 = `main`）。 */
+    private var tier: Int = 0
 
     fun build() {
-        apply(definition)
+        apply(definition, 0)
     }
 
-    private fun cycle(delta: Int) {
+    private fun cycleMachine(delta: Int) {
         if (candidates.size < 2) return
         index = (index + delta + candidates.size) % candidates.size
-        apply(candidates[index])
+        // 换机器 ⇒ 档位回到 `main`
+        apply(candidates[index], 0)
+    }
+
+    /**
+     * 换档：**原地重灌 schema**，不重建预览控件（与 GTM 自己拖 slice 滑条是同一条路），
+     * 所以不会产生第二个 `SchemaRenderer`。
+     */
+    private fun cycleTier(delta: Int) {
+        if (tiers.size < 2) return
+        val current = preview ?: return
+        val next = (tier + delta + tiers.size) % tiers.size
+        if (!PreviewSubstructure.apply(current, definition, tiers[next])) return
+        tier = next
+        // 部件数列表跟着换。ItemDisplayWidget 是普通控件，摘掉即 dispose；
+        // 档位标签是 `TextWidget(Supplier)`（动态文本），不用重建
+        detach(parts)
+        val newParts = buildPartsColumn(current).left(4).bottom(4)
+        parts = newParts
+        panel.child(newParts)
+    }
+
+    /**
+     * 按引用摘子件。
+     *
+     * ⚠️ **不能用 `panel.remove(widget)`**：`AbstractParentWidget.remove(IWidget)` 走的是
+     * `ArrayList.remove(Object)` → `o.equals(e)`，而 MUI 的 `Widget.equals` 写的是
+     * `if (o == null || o.getClass() != Widget.class) return false;`（javap：`equals` 偏移 0-14）——
+     * **任何 Widget 子类都不等于它自己**，于是 `remove` 静默返回 false、控件留在树上。
+     * 这正是「切下一个多方块时上一个的渲染没被剔除」的成因：旧预览控件从没离开 `panel.children`，
+     * 新旧两份都 `.center()` 在同一位置 ⇒ 两个结构叠在一起画。
+     */
+    private fun detach(widget: IWidget?) {
+        val target = widget ?: return
+        val i = panel.children.indexOfFirst { it === target }
+        if (i < 0) return
+        val parentValid = panel.isValid()
+        // panel 有效时 remove(int) 会 dispose 整棵子树（AbstractWidget.dispose 递归子件 →
+        // SchemaWidget.dispose → BaseSchemaRenderer.dispose → compileStatus=DISABLED）；无效时补一次
+        if (panel.remove(i) && !parentValid) target.dispose()
     }
 
     /** 换一份预览：先把旧的从面板摘掉再挂新的（MUI 支持运行时增删子件，`DynamicWidget.updateChild` 就是这套）。 */
-    private fun apply(target: MultiblockMachineDefinition) {
+    private fun apply(target: MultiblockMachineDefinition, tierIndex: Int) {
         try {
-            preview?.let { panel.remove(it) }
-            parts?.let { panel.remove(it) }
-            label?.let { panel.remove(it) }
-            row?.let { panel.remove(it) }
+            detach(preview)
+            detach(parts)
+            detach(label)
+            detach(row)
+            detach(tierRow)
 
             definition = target
             index = candidates.indexOf(target).coerceAtLeast(0)
+            tiers = PreviewSubstructure.names(target)
+            tier = tierIndex.coerceIn(0, (tiers.size - 1).coerceAtLeast(0))
+
             val newPreview = createPreview(
                 target,
                 (width - PREVIEW_MARGIN_X).coerceAtLeast(MIN_PREVIEW_SIZE),
                 (height - PREVIEW_MARGIN_Y).coerceAtLeast(MIN_PREVIEW_SIZE)
             )
+            // 0 号档就是 GTM 构造器自己渲染的 `main`；其余档在这里重灌
+            if (tier > 0) PreviewSubstructure.apply(newPreview, target, tiers[tier])
+
             val newRow = PreviewControls.createRow(newPreview, target, true)
             if (candidates.size >= 2) {
                 // 箭头按钮必须**每次重建**：`AbstractParentWidget.remove` 会 dispose 被摘掉的子树
@@ -199,27 +258,58 @@ private class FullscreenSwitcher(
                 // 复用同一对按钮 ⇒ 第二次切换时挂进去的是已 dispose、valid=false 的控件，既不再绘制也点不动。
                 // IParentWidget.child 的参数顺序是 (index, widget)
                 newRow.child(0, PreviewControls.arrowButton(GuiTextures.MOVE_LEFT,
-                    MultiblockPreviewLang.BUTTON_PREV) { cycle(-1) })
+                    MultiblockPreviewLang.BUTTON_PREV) { cycleMachine(-1) })
                 newRow.child(1, PreviewControls.arrowButton(GuiTextures.MOVE_RIGHT,
-                    MultiblockPreviewLang.BUTTON_NEXT) { cycle(+1) })
+                    MultiblockPreviewLang.BUTTON_NEXT) { cycleMachine(+1) })
             }
             val newParts = buildPartsColumn(newPreview).left(4).bottom(4)
             val newLabel = TextWidget(nameOf(target))
                 .size(LABEL_WIDTH, LABEL_HEIGHT)
                 .textAlign(Alignment.CenterLeft)
                 .left(4).top(4)
+            val newTierRow = buildTierRow()
 
             preview = newPreview
             parts = newParts
             row = newRow
             label = newLabel
+            tierRow = newTierRow
             panel.child(newPreview.center())
             panel.child(newParts)
             panel.child(newLabel)
             panel.child(newRow.right(4).bottom(4))
+            // 档位那一排叠在按钮排之上（面板尺寸是显式像素，right/bottom 不构成循环依赖）
+            newTierRow?.let { panel.child(it.right(4).bottom(4 + BUTTON_ROW_HEIGHT + 2)) }
         } catch (t: Throwable) {
             GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 切换全屏多方块预览失败", t)
         }
+    }
+
+    /** 档位那一排：`[档位名 (i/n)][▲][▼]`；该机器只有一个 substructure 时返回 `null`（不显示）。 */
+    private fun buildTierRow(): Flow? {
+        if (tiers.size < 2) return null
+        val row = Flow.row().name(TIER_ROW_NAME).coverChildren().childPadding(2)
+        row.child(
+            // 动态文本：换档只改字段，标签自己跟着变，不用重建控件
+            TextWidget(Supplier { tierLabel() })
+                .size(TIER_LABEL_WIDTH, BUTTON_ROW_HEIGHT)
+                .textAlign(Alignment.CenterRight)
+        )
+        // 上下箭头：与「多方块」那排（左右箭头）在视觉上分开
+        row.child(PreviewControls.arrowButton(GuiTextures.MOVE_UP,
+            MultiblockPreviewLang.BUTTON_PREV) { cycleTier(-1) })
+        row.child(PreviewControls.arrowButton(GuiTextures.MOVE_DOWN,
+            MultiblockPreviewLang.BUTTON_NEXT) { cycleTier(+1) })
+        return row
+    }
+
+    /** `main (1/3)` / `tier_2 (2/3)` / `tier_3 (3/3)`：复用全屏标题那条 `%s（%s/%s）` 格式键，不新增 lang。 */
+    private fun tierLabel(): Component {
+        if (tier !in tiers.indices) return Component.empty()
+        return Component.translatable(
+            MultiblockPreviewLang.LABEL_INDEX,
+            Component.literal(tiers[tier]), (tier + 1).toString(), tiers.size.toString()
+        )
     }
 
     private fun nameOf(target: MultiblockMachineDefinition): Component {
@@ -288,11 +378,16 @@ private fun buildPartsColumn(preview: MultiblockPreviewWidget): Flow {
     return column
 }
 
-/** 深度优先按名字摘掉子件（只动控件树，不改 GTM 源码）。 */
+/**
+ * 深度优先按名字摘掉子件（只动控件树，不改 GTM 源码）。
+ *
+ * 用索引式 `remove(int)`：`remove(IWidget)` 因 MUI 的 `Widget.equals` 对任何子类都返回 false 而静默失败
+ * （见 [FullscreenSwitcher.detach]），滑条列会一直留在树上。
+ */
 private fun removeChild(root: IWidget, name: String): Boolean {
     val parent = root as? ParentWidget<*> ?: return false
-    val child = parent.children.firstOrNull { it.name == name }
-    if (child != null) return parent.remove(child)
+    val index = parent.children.indexOfFirst { it.name == name }
+    if (index >= 0) return parent.remove(index)
     return parent.children.any { removeChild(it, name) }
 }
 
@@ -315,6 +410,13 @@ private class FullscreenPanel : ModularPanel<FullscreenPanel>(PANEL_NAME)
 private const val OWNER = "gtetscore"
 private const val PANEL_NAME = "gtetscore_multiblock_preview_fullscreen"
 private const val PARTS_NAME = "gtetscore_fullscreen_parts"
+private const val TIER_ROW_NAME = "gtetscore_fullscreen_tiers"
+
+/** 按钮行高（与 `PreviewControls` 里那颗按钮一致），档位那一排叠在按钮排之上。 */
+private const val BUTTON_ROW_HEIGHT = 16
+
+/** 档位标签宽度：固定值，免得行宽随文字抖动。 */
+private const val TIER_LABEL_WIDTH = 96
 
 /** 只留控件自身的 padding(14) + selected_block(20) 那点空间，3D 尽量铺满整屏。 */
 private const val PREVIEW_MARGIN_X = 50

@@ -22,6 +22,13 @@ import rain.fox.gtetcore.data.lang.MultiblockPreviewLang
  * 由 [rain.fox.gtetcore.mixin.gtm.MultiblockPreviewWidgetMixin] 在
  * `MultiblockPreviewWidget.<init>` 的 TAIL 调 [attach] 挂进去。
  *
+ * **内嵌那排按钮的锚点**：不猜像素偏移，改成「认领 SchemaWidget 原来的槽位」——
+ * 把 GTM 建的 `SchemaWidget` 从它父级里按索引摘掉，在**同一个索引**上放一个尺寸等于该
+ * `SchemaWidget` 固定像素尺寸的 [SchemaHolder]，按钮与提示都挂进这个 holder，按钮在 holder 里
+ * `right(0).top(0)`。holder 尺寸是确定值，`right/top` 不构成循环依赖（`coverChildren()` 父级上才会）。
+ * 这么摆的理由：8.0.0 里 3D 控件右边还有 `parts_view`(20) 与 `padding(7)`，宿主（JEI / EMI）给整框报的
+ * 尺寸也不等于控件尺寸，任何「schema 在父级里偏移 20px、按钮贴控件右上角」的绝对像素算式都会飘出框外。
+ *
  * @author rain fox
  */
 object PreviewControls {
@@ -29,16 +36,10 @@ object PreviewControls {
     private const val ROW_NAME = "gtetscore_preview_controls"
     private const val BUTTON_SIZE = 16
 
-    /** 两颗 16px 按钮 + `childPadding(2)`。 */
-    private const val ROW_WIDTH = BUTTON_SIZE * 2 + 2
-
-    /** 3D 视图在预览控件内容区里的左边界：`selected_block` 恒为 20 宽（MultiblockPreviewWidget.java:248-251）。 */
-    private const val SCHEMA_X = 20
-
     /** 正在构造的是全屏那份预览：全屏里那颗按钮是「退出」，内嵌那份是「全屏」。 */
     private var fullscreen: Boolean = false
 
-    /** 构造全屏预览期间置位；见 [buildFullscreenPanel]。 */
+    /** 构造全屏预览期间置位；见 [createRow]。 */
     fun beginFullscreen() {
         fullscreen = true
     }
@@ -51,61 +52,96 @@ object PreviewControls {
      * 挂按钮条（**只挂内嵌那份**）+ 把内嵌的 3D 换成提示文字；失败不能连带 GTM 自己的预览控件打不开。
      *
      * `schemaWidth` / `schemaHeight` = `MultiblockPreviewWidget` 构造器第 3、4 个参数，也就是 3D 控件自己的尺寸
-     * （`MultiblockPreviewWidget.java:192` 的 `.size(width, height)`）。
+     * （`MultiblockPreviewWidget.java:192` 的 `.size(width, height)`）——只在读不到控件真实尺寸时当兜底。
      */
     @JvmStatic
     fun attach(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition,
                schemaWidth: Int, schemaHeight: Int) {
         // 全屏那份的按钮由 buildFullscreenPanel 直接钉在面板右下角、3D 也照常显示，这里不碰
         if (fullscreen) return
-        // 两步**各自兜底**：S1.14 实机里提示那步抛了异常，被同一个 catch 吞掉后连按钮条一起没了（整块空白）。
-        // 按钮条在先：它是交互入口，比那行提示重要。
-        try {
-            val row = createRow(preview, definition, false)
-            // 只给像素制的 left/top：right(int) / rightRel(float) 都要先知道父级宽度，而父级是
-            // `coverChildren()`（宽度反过来由子件撑出），是循环依赖 —— MUI 会先按未解析值摆一次，父级可能被撑大；
-            // 而 JEI 那边整框尺寸取自控件的固定尺寸，取不到就退回 getMaxWidth/getMaxHeight = 200x180
-            // （MultiblockInfoJeiCategory.java:56-63 → ModularUIJeiCategory.getWidth(recipe)），父级一变大框就跟着变。
-            // 用构造参数里的 3D 控件宽度直接算绝对坐标，父级尺寸与这排按钮无关。
-            row.left(SCHEMA_X + schemaWidth - ROW_WIDTH - 2).top(2)
-            preview.child(row)
+        // 三步**各自兜底**：S1.14 实机里提示那步抛了异常，被同一个 catch 吞掉后连按钮条一起没了（整块空白）。
+        // 按钮条最后挂：它是交互入口，比别的都重要。
+        val anchor = try {
+            anchorFor(preview, schemaWidth, schemaHeight)
         } catch (t: Throwable) {
-            GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 挂载多方块预览控制按钮失败", t)
+            warn("建立多方块预览按钮锚点失败", t)
+            null
         }
         try {
-            showFullscreenHint(preview, schemaWidth, schemaHeight)
+            showFullscreenHint(anchor)
         } catch (t: Throwable) {
-            GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] 内嵌页 3D 占位提示挂载失败", t)
+            warn("内嵌页 3D 占位提示挂载失败", t)
+        }
+        try {
+            attachRow(anchor, preview, definition)
+        } catch (t: Throwable) {
+            warn("挂载多方块预览控制按钮失败", t)
         }
     }
 
     /**
-     * 内嵌页不再显示 3D（配方查看器里的绝对视口错位不修了），把 SchemaWidget 从树里摘掉、原位放一行居中提示。
+     * 按钮与提示的落点：`SchemaWidget` 原来的槽位换成一个尺寸确定的容器。
      *
-     * SchemaWidget 是普通控件、不带 handler，摘掉安全（与全屏那边 `parts_view` 的情况不同）。
+     * 失败返回 `null`（调用方各有兜底），不让 GTM 的预览控件打不开。
      */
-    private fun showFullscreenHint(preview: MultiblockPreviewWidget, schemaWidth: Int, schemaHeight: Int) {
-        val schema = preview.multiblockSchemaInfo?.multiSchema ?: return
+    private fun anchorFor(preview: MultiblockPreviewWidget, schemaWidth: Int, schemaHeight: Int): Anchor? {
+        val schema = preview.multiblockSchemaInfo?.multiSchema ?: return null
         // ⚠️ 不能用 `schema.parent`：`AbstractWidget.getParent` 带 isValid 守卫，构造期的子件
         // `valid == false`，直接抛 `IllegalStateException: SchemaWidget is not in a valid state!`
         // （就是 S1.14 实机整块空白的成因）。只能从拿到的预览控件往下找。
-        val parent = findParent(preview, schema) ?: return
-        val index = parent.children.indexOf(schema)
+        val parent = findParent(preview, schema) ?: return null
+        val index = parent.children.indexOfFirst { it === schema }
+        if (index < 0) return null
+
+        // 尺寸取自 SchemaWidget 自己（GTM 构造器里 `.size(width, height)` 钉死的固定像素），拿不到才退回
+        // 构造参数。这是本方法唯一的两个数字，且都是 schema 自己的尺寸、不是它在父级里的偏移。
+        val width = schema.resizer().fixedPixelWidth.takeIf { it > 0 } ?: schemaWidth
+        val height = schema.resizer().fixedPixelHeight.takeIf { it > 0 } ?: schemaHeight
+
+        val holder = SchemaHolder().size(width, height)
         val parentValid = parent.isValid()
-        if (!parent.remove(schema)) return
+        // ⚠️ 必须用**索引式** remove：`AbstractParentWidget.remove(IWidget)` 内部是
+        // `ArrayList.remove(Object)` → `o.equals(e)`，而 MUI 的 `Widget.equals` 写的是
+        // `o.getClass() != Widget.class → false`（javap：equals 偏移 0-14），
+        // 也就是**任何 Widget 子类都不等于它自己** ⇒ 传子件进去永远摘不掉。
+        if (!parent.remove(index)) return null
+        // 摘掉的子树**尚未 validate**，而 `remove` 只在父 `isValid()` 时才 dispose 被摘子件，这里补一次；
+        // `SchemaWidget.dispose` 会调 `SchemaRenderer.dispose`（cancelCompilation + clearBuffer + discardAll）。
+        if (!parentValid) schema.dispose()
+        if (!parent.addChild(holder, index)) return null
+        return Anchor(holder, width, height)
+    }
+
+    /**
+     * 内嵌页不再显示 3D（配方查看器里的绝对视口错位不修了）：`SchemaWidget` 已经被 [anchorFor] 摘掉，
+     * 原位放一行居中提示。
+     */
+    private fun showFullscreenHint(anchor: Anchor?) {
+        // 认不出 schema 的落点就什么都不放：宁可不显示，也不去乱盖 3D
+        val holder = anchor?.holder ?: return
         // 用 TextWidget 而不是 `IDrawable.DrawableWidget(Text.lang(..).asIcon())`：`asIcon()` 返回的是
         // `drawable.Icon`（图标语义，按 box 缩放），多行文本画成什么样不受控；TextWidget 走同一套
         // TextRenderer（按宽折行 + 水平/垂直居中）。
         val hint = TextWidget(Component.translatable(MultiblockPreviewLang.HINT_FULLSCREEN))
-            .size(schemaWidth, schemaHeight)
+            .size(anchor.width, anchor.height)
             .textAlign(Alignment.Center)
             .tooltip { r -> r.addLine(Text.lang(MultiblockPreviewLang.HINT_FULLSCREEN)) }
-        if (index >= 0) parent.addChild(hint, index) else parent.child(hint)
-        // 摘掉的子树**尚未 validate**，而 `AbstractParentWidget.remove` 只在父 `isValid()` 时才 dispose 被摘子件，
-        // 这里补一次；`SchemaWidget.dispose` 会调 `SchemaRenderer.dispose`（cancelCompilation + clearBuffer
-        // + discardAll），GTM 自己从不 dispose 这个 renderer（全 jar 无同时引用 dispose 与 SchemaRenderer 的类）。
-        // 放在提示挂好之后：万一它抛，赔的只是这次资源回收，不会连提示一起没有。
-        if (!parentValid) schema.dispose()
+        holder.addChild(hint, -1)
+    }
+
+    /** 内嵌那排只有「全屏」一颗（见 [createRow] 的 `fullscreen = false` 分支）。 */
+    private fun attachRow(anchor: Anchor?, preview: MultiblockPreviewWidget,
+                          definition: MultiblockMachineDefinition) {
+        val row = createRow(preview, definition, false)
+        if (anchor != null) {
+            // holder 尺寸确定 ⇒ 钉右上角不会反过来影响父级尺寸（老写法在 coverChildren 父级上算绝对坐标，
+            // 一旦父级真实宽度与假设不符按钮就落到框外）
+            anchor.holder.addChild(row.right(0).top(0), -1)
+        } else {
+            // 认不出 schema 的父级（正常构造路径不会发生）：退回预览控件的左上角，保证「全屏」点得到，
+            // 这里同样不猜 3D 的偏移
+            preview.addChild(row.left(0).top(0), -1)
+        }
     }
 
     /** 在自己这棵子树里按引用找 `target` 的父级（构造期用不了 `getParent()`）。 */
@@ -116,7 +152,11 @@ object PreviewControls {
         return null
     }
 
-    /** 按钮条本体；位置由调用方定（内嵌=控件右上角，全屏=面板右下角）。 */
+    private fun warn(message: String, t: Throwable) {
+        GTETSCore.LOGGER.log(Level.WARN, "[GTET-TEST] $message", t)
+    }
+
+    /** 按钮条本体；位置由调用方定（内嵌=holder 右上角，全屏=面板右下角）。 */
     fun createRow(preview: MultiblockPreviewWidget, definition: MultiblockMachineDefinition,
                   fullscreen: Boolean): Flow {
         val row = Flow.row().name(ROW_NAME).coverChildren().childPadding(2)
@@ -163,6 +203,12 @@ object PreviewControls {
         if (screen is MultiblockPreviewFullscreenScreen) screen.closeOverlay()
     }
 
+    /** 按钮与提示的落点；[holder] 就是我们插进 `schema_widgets` 那一排、尺寸等于 3D 控件的容器。 */
+    private class Anchor(val holder: ParentWidget<*>, val width: Int, val height: Int)
+
     /** MUI 的控件是 `Foo<W extends Foo<W>>`，Kotlin 里没法用菱形推断（先例 MachineIoConfigPage.kt:315）。 */
+    private class SchemaHolder : ParentWidget<SchemaHolder>()
+
+    /** 同上。 */
     private class PreviewButton : ButtonWidget<PreviewButton>()
 }
