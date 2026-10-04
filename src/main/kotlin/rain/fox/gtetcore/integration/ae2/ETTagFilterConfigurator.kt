@@ -1,3 +1,5 @@
+@file:Suppress("RedundantSamConstructor", "RemoveExplicitTypeArguments", "unused")
+
 package rain.fox.gtetcore.integration.ae2
 
 import appeng.api.stacks.AEFluidKey
@@ -107,6 +109,19 @@ class ETTagFilterConfigurator(
      * 画两次会让玩家以为要拨两次）。
      */
     private val showShareSwitch: Boolean = true,
+    /**
+     * 浮层标题的键；二合一件的流体侧传 [Ae2Lang.TITLE_FLUIDS]。
+     */
+    private val titleKey: String = Ae2Lang.TITLE,
+    /**
+     * 图标与 tooltip 用哪台机器的图标。
+     *
+     * ⚠️ **不是**同一台机器时才有意义：二合一件的流体侧宿主是**视图对象**
+     * （机器自己的 [IMEStockingHost] 已被物品侧占用），而视图不是 `MetaMachine` —— 传了它就会在
+     * [self] 的强转上抛 `ClassCastException`（面板直接打不开）。所以那种情况下把**真正的机器**
+     * 从这里塞进来，`self()` 优先用它。
+     */
+    private val displayMachine: MetaMachine? = null,
 ) {
 
     /** 幻影槽的样本容器：本实例独占，只有那一个槽，不参与任何真实库存。 */
@@ -119,13 +134,14 @@ class ETTagFilterConfigurator(
     private fun syncKey(name: String): String = key + "_" + name
 
     /**
-     * 机器本体。
+     * 机器本体（图标 / tooltip / `level` / `definition` 都从它取）。
      *
      * ⚠️ [IMEStockingHost] 只保证 `IMuiMachine`（GTM 8.0.0 的面板装配点都在那边），
      * 而 `level` / `definition` 在 `MetaMachine` 上，所以这里显式转一次。
-     * 所有实现类都是 `MetaMachine` 的子类（面板由 GTM 用 `MetaMachine` 驱动），转换不会失败。
+     * 所有实现类都是 `MetaMachine` 的子类（面板由 GTM 用 `MetaMachine` 驱动），转换不会失败 ——
+     * **除非**宿主是二合一仓那种「视图对象」，那就必须由 [displayMachine] 指定真机器。
      */
-    private fun self(): MetaMachine = machine as MetaMachine
+    private fun self(): MetaMachine = displayMachine ?: machine as MetaMachine
 
     /**
      * 装配：往右侧配置列串一个按钮，按钮点开本配置器的浮层。
@@ -154,7 +170,7 @@ class ETTagFilterConfigurator(
                 true
             }
             .tooltipAutoUpdate(true)
-            .tooltipBuilder { it.addLine(Text.lang(Ae2Lang.TITLE)) }
+            .tooltipBuilder { it.addLine(Text.lang(titleKey)) }
     }
 
     /** 浮层本体：四 / 五行控件 + 四行说明。 */
@@ -347,6 +363,8 @@ class ETTagFilterConfigurator(
          *
          * @param fluid          true = 流体部件
          * @param showShareSwitch 二合一件的流体侧那块面板传 false
+         * @param titleKey       浮层标题与入口按钮 tooltip 的键；二合一件流体侧传 [Ae2Lang.TITLE_FLUIDS]
+         * @param displayMachine 宿主不是 `MetaMachine` 时（二合一件的流体侧视图）传**真正的机器**
          */
         @JvmStatic
         fun attach(
@@ -356,8 +374,11 @@ class ETTagFilterConfigurator(
             settings: UISettings,
             fluid: Boolean,
             showShareSwitch: Boolean = true,
+            titleKey: String = Ae2Lang.TITLE,
+            displayMachine: MetaMachine? = null,
         ) {
-            ETTagFilterConfigurator(machine, fluid, showShareSwitch).attach(builder, syncManager)
+            ETTagFilterConfigurator(machine, fluid, showShareSwitch, titleKey, displayMachine)
+                .attach(builder, syncManager)
         }
     }
 }
