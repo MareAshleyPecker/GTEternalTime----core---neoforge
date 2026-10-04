@@ -19,7 +19,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
                              jei_version            : jei_version,
                              emi_version            : emi_version,
                              jade_version           : jade_version,
-                             ae2_version            : ae2_version]
+                             ae2_version            : ae2_version,
+                             ldlib2_version         : ldlib2_version]
     inputs.properties replaceProperties
     expand replaceProperties
     from "src/main/templates"

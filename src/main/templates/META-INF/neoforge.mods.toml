@@ -119,3 +119,13 @@ type = "optional"
 versionRange = "[${ae2_version},)"
 ordering = "AFTER"
 side = "BOTH"
+
+# LDLib2（**必需**）：GTET 自己的界面栈 —— 机器输入输出配置页（接管中）与高级终端迁移都建在它上面。
+# GTCEu 8.0.0 已不再捎带 LDLib2（它改用 MUI），所以想用就必须自己声明成必需依赖，否则生产环境
+# 一加载到引用它的类就是 NoClassDefFoundError。本 mod 是整合包的一部分，直接按必需走。
+[[dependencies."${mod_id}"]]
+modId = "ldlib2"
+type = "required"
+versionRange = "[${ldlib2_version},)"
+ordering = "AFTER"
+side = "BOTH"
