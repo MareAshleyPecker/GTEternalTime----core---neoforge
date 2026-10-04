@@ -1,4 +1,4 @@
-@file:Suppress("RemoveExplicitTypeArguments", "RedundantSamConstructor")
+@file:Suppress("RemoveExplicitTypeArguments", "RedundantSamConstructor", "MayBeConstant")
 
 package rain.fox.gtetcore.client.mui
 
@@ -12,6 +12,7 @@ import brachy.modularui.drawable.ItemDrawable
 import brachy.modularui.drawable.Rectangle
 import brachy.modularui.drawable.UITexture
 import brachy.modularui.integration.embeddium.SodiumCompat
+import net.neoforged.fml.ModList
 import brachy.modularui.screen.viewport.GuiContext
 import brachy.modularui.theme.WidgetTheme
 import brachy.modularui.value.BoolValue
@@ -198,9 +199,9 @@ class MachineIoConfigPage(
     private val fluidFaceSync = faceSync(SYNC_FLUID_FACE, { trait.fluidOutputDirection },
         { trait.setFluidOutputDirection(it) })
 
-    private val autoItemSync = boolSync(SYNC_AUTO_ITEM, { trait.isAutoOutputItems() },
+    private val autoItemSync = boolSync(SYNC_AUTO_ITEM, { trait.isAutoOutputItems },
         { trait.setAllowAutoOutputItems(it) })
-    private val autoFluidSync = boolSync(SYNC_AUTO_FLUID, { trait.isAutoOutputFluids() },
+    private val autoFluidSync = boolSync(SYNC_AUTO_FLUID, { trait.isAutoOutputFluids },
         { trait.setAllowAutoOutputFluids(it) })
     private val allowInItemSync = boolSync(SYNC_ALLOW_IN_ITEM, { trait.allowsItemInputFromOutputSide() },
         { trait.setAllowItemInputFromOutputSide(it) })
@@ -540,6 +541,16 @@ private enum class FaceSlot(val langKey: String, val shortKey: String) {
  * 对**真动画贴图**这是对的（MC 把当前帧原地写进该区域，画整张就等于画当前帧，会自己动），
  * 但 GT 那种 16×96 六帧竖排贴图会被整条压进格子里 —— 所以这里按 `contents()` 的高宽比切出**第一帧**。
  */
+/**
+ * Sodium / Embeddium 在不在（只算一次）。
+ *
+ * ⚠️ MUI 的 `SodiumCompat` 没有守卫，见 [SpriteRegionDrawable.draw] 里的说明；这条判断是调用方
+ * 唯一的防线。Sodium 1.21.1 的 mod id 是 `sodium`，Forge 侧移植版叫 `embeddium`，两个都认。
+ */
+private val SODIUM_PRESENT: Boolean by lazy {
+    ModList.get().isLoaded("sodium") || ModList.get().isLoaded("embeddium")
+}
+
 private class SpriteRegionDrawable(private val sprite: TextureAtlasSprite) : IDrawable {
 
     /** 竖排多帧时只画第一帧的 V 范围；`width`/`height` 就是单帧尺寸。 */
@@ -558,8 +569,12 @@ private class SpriteRegionDrawable(private val sprite: TextureAtlasSprite) : IDr
     }
 
     override fun draw(context: GuiContext, x: Int, y: Int, w: Int, h: Int, theme: WidgetTheme) {
-        // MC/Sodium 只给「活跃」的 sprite 走动画帧（MUI 自己在 schema 渲染里也这么干）
-        SodiumCompat.markSpritesAsActive(listOf(sprite))
+        // MC/Sodium 只给「活跃」的 sprite 走动画帧（MUI 自己在 schema 渲染里也这么干）。
+        // ⚠️ 必须自己挡住「没装 Sodium/Embeddium」这种情况：MUI 的 `SodiumCompat` **没有任何守卫**，
+        //    它的 `markSpritesAsActive` 内部直接引用 `net.caffeinemc.mods.sodium.api.texture.SpriteUtil`，
+        //    没装时一调就 `NoClassDefFoundError`（实机崩溃：`SodiumCompat.java:14` ← 本行）。
+        //    放进 if 里还顺带保证那个类在缺 Sodium 时**根本不会被解析**。
+        if (SODIUM_PRESENT) SodiumCompat.markSpritesAsActive(listOf(sprite))
 
         // 等比缩放 + 居中，不拉伸
         val scale = minOf(w.toFloat() / frameWidth, h.toFloat() / frameHeight)
