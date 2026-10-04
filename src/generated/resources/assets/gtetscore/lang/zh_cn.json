@@ -367,7 +367,6 @@
   "item.gtetscore.clock_of_time_sequence": "§b时序钟",
   "item.gtetscore.clock_of_time_sequence.tooltip.carry": "存储时间流（TF）；绑定主控塔后可跨维度搬运",
   "item.gtetscore.clock_of_time_sequence.tooltip.upgrade": "用升级件提升容量档位（L1 → L3），钟内 TF 不丢",
-  "item.gtetscore.ldlib2_probe": "§bLDLib2 冒烟道具",
   "item.gtetscore.recipe_editor": "配方编辑器",
   "item.gtetscore.structure_checker": "结构刷新工具",
   "item.gtetscore.structure_detect": "结构检测工具",

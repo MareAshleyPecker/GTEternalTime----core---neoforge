@@ -368,7 +368,6 @@
   "item.gtetscore.clock_of_time_sequence": "§bTime clock",
   "item.gtetscore.clock_of_time_sequence.tooltip.carry": "Stores time flow (TF); bind it to a master tower to carry TF across dimensions",
   "item.gtetscore.clock_of_time_sequence.tooltip.upgrade": "Upgrade items raise the capacity tier (L1 -> L3); stored TF is kept",
-  "item.gtetscore.ldlib2_probe": "§bLDLib2 Probe (S1 smoke)",
   "item.gtetscore.recipe_editor": "Recipe Editor",
   "item.gtetscore.structure_checker": "Structure Recheck Tool",
   "item.gtetscore.structure_detect": "Structure Detect Tool",
